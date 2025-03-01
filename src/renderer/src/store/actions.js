@@ -1,0 +1,5 @@
+export default {
+    getScroll(){
+        return 
+    }
+}

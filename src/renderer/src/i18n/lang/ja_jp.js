@@ -1,0 +1,48 @@
+export default {
+  sideBar: {
+    home: "首页",
+    discover: "発見",
+    recommend: "おすすめ",
+    musicStyle: "音楽スタイル",
+    my: "わたし",
+    musicLibrary: "音楽ライブラリ",
+    history: "記録",
+    cloud: "音楽クラウド",
+    downloader: "ダウンローダー",
+  },
+  loginWindow: {
+    title: "ログインしていません",
+    subtitle:
+      "ネットイーズ・クラウド・ミュージックアカウントにログインして、最高の音楽体験をお楽しみください！",
+    promise:
+      "*NekoPlayerは個人情報を収集しません。情報は暗号化され、Netease Cloud Musicに送信されます。非公式アプリです。敏感情報を入力する際は十分ご注意ください。",
+    loginAsQr: "QR コードでログイン",
+    qrWaiting: "承認を待機中",
+    qrSuccess: "承認成功",
+    qrError: "ログイン失敗",
+    qrTimeout: "QRコードの有効期限切れ",
+    loginAsPhone: "SMS認証でログイン",
+    login: "ログイン",
+    cellphone: "電話番号を入力してください",
+    captcha: "認証コード",
+    captchaError: "再試行してください",
+  },
+  recommend: {
+    changeNew: "次の一揃りをみる",
+    officialRadar: "公式レーダー",
+    bestPlaylist: "ベストプレイリスト",
+    latestAlbum: "最新アルバム速報",
+    albumArea: {
+      all: "すべて",
+      zh: "中国語",
+      ea: "欧米",
+      jp: "日本",
+      kr: "韓国",
+    },
+    category: "カテゴリー",
+    personalFM: "個人的FM",
+    FMTip: "個人的FM・あなたの為に",
+    more: "もっと見る",
+    warp: "閉じる",
+  },
+};

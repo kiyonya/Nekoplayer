@@ -1,0 +1,138 @@
+
+html[data-theme='dark'] {
+  
+  --i:#fff;
+  --on:#7c79c3;
+  --hover:hsl(0, 0%, 22%);
+  
+  --router-active:rgb(57,57,59);
+  --app-theme: rgb(28, 28, 30);
+  --app-theme-op:rgba(27, 26, 28, 0.613);
+  --app-theme-widget: rgb(255, 255, 255);
+  --app-theme-component: rgb(37, 37, 40);
+  --app-theme-component-op: rgba(43, 43, 47, 0.9);
+
+
+  --app-theme-strong: #6970eb;
+  --app-theme-strong-background: #7a77cd;
+  --app-theme-strong-background-light:#7a77cd92;
+
+  --app-text: #ffffff;
+  --app-text-i: #000000;
+
+  --devide-color: #ffffff48;
+  --devide-color-l: #ffffff11;
+  --devide-color-d: #ffffff83;
+
+  --progress-slider-background: rgb(218, 220, 223);
+  --progress-slider-progress: hsl(252, 75%, 66%);
+  --progress-slider-thumb: rgb(242, 244, 248);
+
+
+  --text-opacity-0: 1;
+  --text-opacity-1: 1;
+  --text-opacity-2: 0.9;
+  --text-opacity-3: 0.85;
+  --text-opacity-4: 0.7;
+  --text-opacity-5: 0.6;
+  --FM-title-text-opacity: 1;
+  --FM-artist-text-opacity: 0.9;
+
+  --side-bar-background-color: rgb(37, 37, 37);
+  --side-bar-link-opacity: 0.9;
+  --side-bar-border:#ffffff11;
+  
+  --song-gap:rgb(35,35,35);
+  --song-hover:rgb(44, 44, 44);
+
+
+  /*图标反转*/
+  --icon-invert: 1;
+  /*颜色控件的颜色*/
+  --color-comp-opacity: 0.8;
+  --color-comp: #ffffff;
+  --border:#ffffff2f;
+  --text-color:#fff;
+  --mid-glay:hsl(252, 75%, 66%);
+  --scrollbar-background:transparent;
+  --scrollbar-color:rgb(69,73,78);
+  --playlist-display-background:rgb(29,29,29);
+  --click-window:rgb(55, 55, 58);
+}
+
+
+:root {
+  --i:#000;
+  --on:#7a82dd;
+  --app-background: rgb(247, 249, 252);
+  --side-bar-background-color: rgb(240, 243, 246);
+  --normal-playbar-background-color: rgb(250, 250, 250);
+
+  --progress-slider-background: rgb(218, 220, 223);
+  --progress-slider-progress: rgb(252, 61, 75);
+  --progress-slider-thumb: rgb(242, 244, 248);
+
+  --app-theme: rgb(247, 249, 252);
+  --app-theme-op:rgba(247, 249, 252, 0.74);
+  --app-theme-darker: rgb(240, 243, 246);
+  --app-theme-widget: rgb(255, 255, 255);
+  --app-theme-component: rgb(255, 255, 255);
+  --app-theme-component-op: rgba(255, 255, 255,0.95);
+  --app-theme-strong: #6970eb;
+  --app-theme-strong-background: #6970eb;
+  --app-theme-strong-background-op: #cfd1ff;
+  --app-theme-decoration: #191919;
+
+  --app-text: #000;
+  --app-text-i: #fff;
+
+  --devide-color: #00000048;
+  --devide-color-l: #0000000f;
+  --devide-color-d: #00000083;
+
+  --text-opacity-0: 1;
+  --text-opacity-1: 0.8;
+  --text-opacity-2: 0.7;
+  --text-opacity-3: 0.65;
+  --text-opacity-4: 0.5;
+  --text-opacity-5: 0.45;
+  --FM-title-text-opacity: 1;
+  --FM-artist-text-opacity: 0.9;
+
+  --side-bar-link-opacity: 0.75;
+
+  --song-gap:#ffffff00;
+  --song-hover:rgb(255, 255, 255);
+  /*图标反转*/
+  --icon-invert: 0;
+  /*颜色控件的颜色*/
+  --color-comp-opacity: 0.6;
+  --color-comp: #000000;
+
+  --border:#00000028;
+  --text-color:#000;
+
+  --mid-glay:rgb(227, 229, 231);
+--hover:rgba(227, 229, 231, 0.6);
+  --scrollbar-background:transparent;
+  --scrollbar-color:rgb(214, 214, 214);
+
+  --playlist-display-background:rgb(255, 255, 255);
+
+  --click-window:rgb(255, 255, 255);
+
+
+
+  --br-1:0.3rem;
+
+  --component:#ffffff;
+  --component-shadow:#00000033;
+
+  --text:#000;
+  --text-o-1:rgba(0, 0, 0, 0.9);
+  --text-o-2:rgba(0, 0, 0, 0.8);
+  --text-o-3:rgba(0, 0, 0, 0.7);
+  --text-o-4:rgba(0, 0, 0, 0.6);
+
+
+}
