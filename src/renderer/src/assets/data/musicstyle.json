@@ -1,0 +1,170 @@
+[
+    {
+        "id": 1017,
+        "name": "嘻哈说唱",
+        "enName": "Hip Hop/Rap",
+        "colorDeep": "012C8C",
+        "colorShallow": "E6EDFF"
+    },
+    {
+        "id": 1015,
+        "name": "电子",
+        "enName": "Electronic",
+        "colorDeep": "46094A",
+        "colorShallow": "F7EBF7"
+    },
+    {
+        "id": 1028,
+        "name": "节奏布鲁斯",
+        "enName": "R&B",
+        "colorDeep": "3E3F5A",
+        "colorShallow": "E1E1EA"
+    },
+    {
+        "id": 1008,
+        "name": "摇滚",
+        "enName": "Rock",
+        "colorDeep": "002D53",
+        "colorShallow": "E5F3FF"
+    },
+    {
+        "id": 1252,
+        "name": "二次元",
+        "enName": "ACG",
+        "colorDeep": "EA647B",
+        "colorShallow": "FFE7EB"
+    },
+    {
+        "id": 1010,
+        "name": "原声带",
+        "enName": "OST",
+        "colorDeep": "510813",
+        "colorShallow": "FDE8EB"
+    },
+    {
+        "id": 1000,
+        "name": "流行",
+        "enName": "Pop",
+        "colorDeep": "23303B",
+        "colorShallow": "E5EBF0"
+    },
+    {
+        "id": 1003,
+        "name": "民谣",
+        "enName": "Folk",
+        "colorDeep": "5B4033",
+        "colorShallow": "EDE3DE"
+    },
+    {
+        "id": 10119,
+        "name": "国风",
+        "enName": "Chinese Style",
+        "colorDeep": "990807",
+        "colorShallow": "FFEAEA"
+    },
+    {
+        "id": 1022,
+        "name": "古典",
+        "enName": "Classical",
+        "colorDeep": "111111",
+        "colorShallow": "EBEBEB"
+    },
+    {
+        "id": 1011,
+        "name": "爵士",
+        "enName": "Jazz",
+        "colorDeep": "492C1E",
+        "colorShallow": "F5EBE6"
+    },
+    {
+        "id": 1026,
+        "name": "儿童",
+        "enName": "Children",
+        "colorDeep": "C3A392",
+        "colorShallow": "F2ECE8"
+    },
+    {
+        "id": 1006,
+        "name": "轻音乐",
+        "enName": "Easy Listening",
+        "colorDeep": "243320",
+        "colorShallow": "EBF1E9"
+    },
+    {
+        "id": 79088,
+        "name": "慢摇DJ",
+        "enName": "Manyao DJ",
+        "colorDeep": "002AAD",
+        "colorShallow": "E3EAFF"
+    },
+    {
+        "id": 1001,
+        "name": "中国音乐",
+        "enName": "Chinese",
+        "colorDeep": "A55647",
+        "colorShallow": "F3E5E2"
+    },
+    {
+        "id": 1014,
+        "name": "另类/独立",
+        "enName": "Alternative/Indie",
+        "colorDeep": "2D2F30",
+        "colorShallow": "EAEBEB"
+    },
+    {
+        "id": 1077,
+        "name": "乡村",
+        "enName": "Country",
+        "colorDeep": "B4845F",
+        "colorShallow": "F2EAE3"
+    },
+    {
+        "id": 1007,
+        "name": "新世纪",
+        "enName": "New Age",
+        "colorDeep": "005BC7",
+        "colorShallow": "DBECFF"
+    },
+    {
+        "id": 152124,
+        "name": "朋克",
+        "enName": "Punk",
+        "colorDeep": "3E3D4B",
+        "colorShallow": "E9E9ED"
+    },
+    {
+        "id": 1012,
+        "name": "世界音乐",
+        "enName": "World Music",
+        "colorDeep": "1F576B",
+        "colorShallow": "E3F2F7"
+    },
+    {
+        "id": 1071,
+        "name": "拉丁音乐",
+        "enName": "Latin",
+        "colorDeep": "5C1B1C",
+        "colorShallow": "F8E7E8"
+    },
+    {
+        "id": 1041,
+        "name": "金属",
+        "enName": "Metal",
+        "colorDeep": "52383F",
+        "colorShallow": "EEE7E9"
+    },
+    {
+        "id": 1037,
+        "name": "蓝调",
+        "enName": "Blues",
+        "colorDeep": "763C27",
+        "colorShallow": "F8EEEA"
+    },
+    {
+        "id": 1043,
+        "name": "雷鬼",
+        "enName": "Reggae",
+        "colorDeep": "4A6363",
+        "colorShallow": "E6EFEF"
+    }
+]

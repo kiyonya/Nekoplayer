@@ -1,0 +1,13 @@
+{
+    "name":"Dafault-pack",
+    "author":"aq",
+    "desc":"默认资源包",
+    "version":"1.0.0",
+    "color":{
+        "dark":"/style/dark.css",
+        "light":"/style/light.css"
+    },
+    "font":{
+        "name":"system-ui"
+    }
+}

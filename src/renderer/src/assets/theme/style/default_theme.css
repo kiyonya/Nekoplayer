@@ -1,0 +1,214 @@
+html[data-theme='dark'] {
+  --root:rgb(17, 17, 18);
+  --bloom:var(--strong);
+  --app: #1b1b1b;
+  --app-light: rgb(152, 152, 152);
+  --app-dark: rgba(24, 24, 24, 0.6);
+  --component: rgb(30, 30, 36);
+  --component-diff:rgba(38, 38, 47, 0.6);
+  --ui: rgb(31,32,50);
+  --ui-light: rgb(66, 66, 66);
+  --ui-dark: rgb(45, 45, 45);
+  --hover: rgb(32,32,42);
+  --border: rgba(87, 87, 87, 0.321);
+  --border-light: rgb(109, 109, 109);
+  --strong: rgb(133, 141, 255);
+  --strong-light: rgb(109, 118, 255);
+  --strong-dark: rgb(44, 52, 204);
+  --strong-background: #6970eb;
+  --progress-background: rgb(218, 220, 223);
+  --progress-progress: rgb(61, 179, 252);
+  --progress-thumb: rgb(242, 244, 248);
+  --progress-slider-background: rgb(211, 211, 211);
+  --progress-slider-progress: rgb(29, 121, 219);
+  --progress-slider-thumb: rgb(242, 244, 248);
+  --icon: rgb(224, 224, 224);
+  --icon-light: rgb(255, 255, 255);
+  --icon-lighter: rgb(255, 255, 255);
+  --icon-dark: rgb(255, 255, 255);
+  --icon-darker: rgb(255, 255, 255);
+  --text: #ffffff;
+  --text-o-1: rgba(255, 255, 255, 0.95);
+  --text-o-2: rgba(255, 255, 255, 0.9);
+  --text-o-3: rgba(255, 255, 255, 0.85);
+  --text-o-4: rgba(255, 255, 255, 0.75);
+  --decoration: #ffffff;
+  --opacity-0: 1;
+  --opacity-1: 0.8;
+  --opacity-2: 0.7;
+  --opacity-3: 0.65;
+  --opacity-4: 0.5;
+  --opacity-5: 0.45;
+  --scrollbar-background: transparent;
+  --scrollbar-color: rgb(169, 169, 169);
+  --br-1: 0.3rem;
+  --br-2: 0.5rem;
+  --br-3: 0.8rem;
+  --br-4: 1rem;
+  --br-p-1: 5px;
+  --br-p-2: 8px;
+  --br-p-3: 10px;
+  --shadow: rgba(0, 0, 0, 0.2) 0px 4px 12px;
+  --shadow-dark: rgba(0, 0, 0, 0.2) 0px 4px 12px;
+  --shadow-surround: rgba(31, 31, 37, 0.3) 0px 7px 29px 0px;
+  --shadow-surround-light: rgba(149, 157, 165, 0.2) 0px 8px 24px;
+  --shadow-surround-dark: rgba(0, 0, 0, 0.35) 0px 5px 15px;
+  --shadow-flow: rgba(50, 50, 93, 0.25) 0px 50px 100px -20px, rgba(0, 0, 0, 0.3) 0px 30px 60px -30px;
+  --shadow-insert: rgba(50, 50, 93, 0.25) 0px 30px 60px -12px inset, rgba(0, 0, 0, 0.3) 0px 18px 36px -18px inset;
+
+  --onplay: #fff;
+
+
+  .onplay {
+    background-color: var(--strong-light) !important;
+    color: #fff !important;
+  }
+
+  .onplay * {
+    color: #fff !important;
+  }
+
+}
+
+html[data-theme='light'] {
+  /**/
+  --root: rgb(247, 250, 254);
+  --bloom:rgb(245, 121, 144);
+  --app: rgb(247,249,252);
+  --app-light: rgb(255, 255, 255);
+  --app-dark: rgba(246, 247, 248, 0.75);
+  --component-no-op:rgb(255,255,255);
+  --component: rgb(255, 255, 255);
+  --component-diff:rgba(255, 255, 255, 0.4);
+  --ui: rgb(248, 248, 250);
+  --ui-light: rgb(236, 237, 239);
+  --ui-dark: rgb(219, 221, 223);
+  --hover: rgba(220, 220, 220, 0.7);
+  --border: rgb(218, 220, 223);
+  --border-light: rgb(228, 230, 233);
+  --strong: rgb(121, 130, 255);
+  --strong-light: rgb(109, 118, 255);
+  --strong-dark: rgb(44, 52, 204);
+  --strong-background: #6970eb;
+  --progress-background: rgb(218, 220, 223);
+  --progress-progress: rgb(61, 179, 252);
+  --progress-thumb: rgb(242, 244, 248);
+  --progress-slider-background: rgb(211, 211, 211);
+  --progress-slider-progress: rgb(29, 121, 219);
+  --progress-slider-thumb: rgb(242, 244, 248);
+  --icon: rgb(97, 102, 109);
+  --icon-light: rgb(76, 76, 76);
+  --icon-lighter: rgb(100, 100, 100);
+  --icon-dark: rgb(79, 83, 88);
+  --icon-darker: rgb(46, 48, 51);
+  --text: #000;
+  --text-o-1: rgba(0, 0, 0, 0.9);
+  --text-o-2: rgba(0, 0, 0, 0.8);
+  --text-o-3: rgba(0, 0, 0, 0.7);
+  --text-o-4: rgba(0, 0, 0, 0.65);
+  --decoration: #191919;
+  --opacity-0: 1;
+  --opacity-1: 0.8;
+  --opacity-2: 0.7;
+  --opacity-3: 0.65;
+  --opacity-4: 0.5;
+  --opacity-5: 0.45;
+  --scrollbar-background: transparent;
+  --scrollbar-color: rgb(214, 214, 214);
+  --br-1: 0.3rem;
+  --br-2: 0.5rem;
+  --br-3: 0.8rem;
+  --br-4: 1rem;
+  --br-p-1: 5px;
+  --br-p-2: 8px;
+  --br-p-3: 10px;
+  --shadow: rgba(0, 0, 0, 0.1) 0px 4px 12px;
+  --shadow-dark: rgba(0, 0, 0, 0.2) 0px 4px 12px;
+  --shadow-surround: rgba(100, 100, 111, 0.3) 0px 7px 29px 0px;
+  --shadow-surround-light: rgba(149, 157, 165, 0.2) 0px 8px 24px;
+  --shadow-surround-dark: rgba(0, 0, 0, 0.35) 0px 5px 15px;
+  --shadow-flow: rgba(50, 50, 93, 0.25) 0px 50px 100px -20px, rgba(0, 0, 0, 0.3) 0px 30px 60px -30px;
+  --shadow-insert: rgba(50, 50, 93, 0.25) 0px 30px 60px -12px inset, rgba(0, 0, 0, 0.3) 0px 18px 36px -18px inset;
+
+  --onplay: #fff;
+
+
+  .onplay {
+    background-color: var(--strong-light) !important;
+    color: #fff !important;
+  }
+
+  .onplay * {
+    color: #fff !important;
+  }
+}
+
+html[data-theme='ocean'] {
+  /**/
+  --app: rgb(247, 254, 255);
+  --app-light: rgb(242, 255, 255);
+  --app-dark: rgb(192, 240, 255);
+  --component: rgb(247, 254, 255);
+  --component-diff:rgb(177, 218, 255);
+  --ui: rgb(240, 241, 243);
+  --ui-light: rgb(236, 237, 239);
+  --ui-dark: rgb(219, 221, 223);
+  --hover: rgb(234, 234, 234);
+  --border: rgb(218, 220, 223);
+  --border-light: rgb(228, 230, 233);
+  --strong: rgb(85, 167, 255);
+  --strong-light: rgb(109, 211, 255);
+  --strong-dark: rgb(113, 119, 242);
+  --strong-background: #6970eb;
+  --progress-background: rgb(218, 220, 223);
+  --progress-progress: rgb(252, 61, 75);
+  --progress-thumb: rgb(242, 244, 248);
+  --progress-slider-background: rgb(218, 220, 223);
+  --progress-slider-progress: rgb(252, 61, 75);
+  --progress-slider-thumb: rgb(242, 244, 248);
+  --icon: rgb(97, 102, 109);
+  --icon-light: rgb(76, 76, 76);
+  --icon-lighter: rgb(100, 100, 100);
+  --icon-dark: rgb(79, 83, 88);
+  --icon-darker: rgb(46, 48, 51);
+  --text: #000;
+  --text-o-1: rgba(0, 0, 0, 0.9);
+  --text-o-2: rgba(0, 0, 0, 0.8);
+  --text-o-3: rgba(0, 0, 0, 0.7);
+  --text-o-4: rgba(0, 0, 0, 0.6);
+  --decoration: #191919;
+  --opacity-0: 1;
+  --opacity-1: 0.8;
+  --opacity-2: 0.7;
+  --opacity-3: 0.65;
+  --opacity-4: 0.5;
+  --opacity-5: 0.45;
+  --scrollbar-background: transparent;
+  --scrollbar-color: rgb(214, 214, 214);
+  --br-1: 0.3rem;
+  --br-2: 0.5rem;
+  --br-3: 0.8rem;
+  --br-4: 1rem;
+  --br-p-1: 5px;
+  --br-p-2: 8px;
+  --br-p-3: 10px;
+  --shadow: rgba(0, 0, 0, 0.1) 0px 4px 12px;
+  --shadow-dark: rgba(0, 0, 0, 0.2) 0px 4px 12px;
+  --shadow-surround: rgba(100, 100, 111, 0.3) 0px 7px 29px 0px;
+  --shadow-surround-light: rgba(149, 157, 165, 0.2) 0px 8px 24px;
+  --shadow-surround-dark: rgba(0, 0, 0, 0.35) 0px 5px 15px;
+  --shadow-flow: rgba(50, 50, 93, 0.25) 0px 50px 100px -20px, rgba(0, 0, 0, 0.3) 0px 30px 60px -30px;
+  --shadow-insert: rgba(50, 50, 93, 0.25) 0px 30px 60px -12px inset, rgba(0, 0, 0, 0.3) 0px 18px 36px -18px inset;
+
+  --onplay: #fff;
+
+
+  .onplay {
+    background-color: var(--strong-light) !important;
+    color: #fff !important;
+  }
+
+  .onplay * {
+    color: #fff !important;
+  }
+}
