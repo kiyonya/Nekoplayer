@@ -15,15 +15,15 @@
 > 由于开发限制，仅构建了window平台的release，更多平台支持可以下载代码自行构建由于开发限制，仅构建了window平台的release，更多平台支持可以下载代码自行构建
 
 ## 下载应用
-请访问 📦[release](https://gitee.com/aqcatqwq/nekoplayer/releases)
+请访问 📦[release](https://github.com/kiyonya/Nekoplayer/release)
 
 ## 应用图片
-![播放页](https://gitee.com/aqcatqwq/nekoplayer/raw/master/images/player.png)
-![歌单](https://gitee.com/aqcatqwq/nekoplayer/raw/master/images/playlist.png)
-![专辑](https://gitee.com/aqcatqwq/nekoplayer/raw/master/images/album.png)
-![本地音乐集](https://gitee.com/aqcatqwq/nekoplayer/raw/master/images/localmusic.png)
-![音乐库](https://gitee.com/aqcatqwq/nekoplayer/raw/master/images/library.png)
-![推荐页](https://gitee.com/aqcatqwq/nekoplayer/raw/master/images/recomend.png)
+![播放页](https://github.com/kiyonya/Nekoplayer/blob/master/images/player.png)
+![歌单](https://github.com/kiyonya/Nekoplayer/blob/master/images/playlist.png)
+![专辑](https://github.com/kiyonya/Nekoplayer/blob/master/images/album.png)
+![本地音乐集](https://github.com/kiyonya/Nekoplayer/blob/master/images/localmusic.png)
+![音乐库](https://github.com/kiyonya/Nekoplayer/blob/master/images/library.png)
+![推荐页](https://github.com/kiyonya/Nekoplayer/blob/master/images/recomend.png)
 
 ## 开源协议
 本项目仅供个人学习研究使用，禁止用于商业及非法用途。
