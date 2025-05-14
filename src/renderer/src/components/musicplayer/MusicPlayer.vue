@@ -1,5 +1,5 @@
 <template>
-  <div class="music-player" @click="togglePlaylisyBar()">
+  <div class="music-player" >
     <div class="top-control">
       <button @click.stop="store.commit('showPlayer', false)">
         <Icon icon="mingcute:down-line" class="icon2" />
@@ -18,7 +18,8 @@
       <div class="music-info">
         <div class="content">
           <h2 class="name text-limit">{{ musicInfo.name }}</h2>
-          <ArtistNameGroup :array="musicInfo.artist" class="artist" @router-leave="store.commit('showPlayer', false)"></ArtistNameGroup>
+          <ArtistNameGroup :array="musicInfo.artist" class="artist" @router-leave="store.commit('showPlayer', false)">
+          </ArtistNameGroup>
         </div>
         <div class="like">
           <button>
@@ -40,21 +41,22 @@
       </div>
 
       <div class="functions">
-        <button >
+        <button>
           <Icon icon="hugeicons:share-04" class="icon1" />
         </button>
-        <button @click="store.commit('showEqualizer',true)">
+        <button @click="store.commit('showEqualizer', true)">
           <Icon icon="fluent:device-eq-20-filled" class="icon1" />
         </button>
         <button>
           <Icon icon="tdesign:ellipsis" class="icon1" />
         </button>
         <button class="volume-button" @click="player.toggleMute()">
-          <Icon icon="material-symbols:volume-up-rounded" class="icon1"/>
+          <Icon icon="material-symbols:volume-up-rounded" class="icon1" />
         </button>
-        <VueSlider  :tooltip="'none'" class="volume-slider" width="30%" height="4px"
-        :process-style="{ background: '#fff' }" :rail-style="{ background: '#ffffff60' }" :dot-style="{display:'none'}" :max="1" :min="0" :interval="0.01" v-model="volume">
-        
+        <VueSlider :tooltip="'none'" class="volume-slider" width="30%" height="4px"
+          :process-style="{ background: '#fff' }" :rail-style="{ background: '#ffffff60' }"
+          :dot-style="{ display: 'none' }" :max="1" :min="0" :interval="0.01" v-model="volume">
+
         </VueSlider>
       </div>
 
@@ -63,7 +65,8 @@
       <div class="audio-progress">
         <div class="progress">
           <VueSlider :interval="0.01" :height="4" :min="0" :max="1" v-model="progress" :tooltip="'none'" class="slider"
-            :process-style="{ background: '#fff' }" :rail-style="{ background: '#ffffff60' }" :useKeyboard="true" :dot-style="{display:'none'}"></VueSlider>
+            :process-style="{ background: '#fff' }" :rail-style="{ background: '#ffffff60' }" :useKeyboard="true"
+            :dot-style="{ display: 'none' }"></VueSlider>
         </div>
 
         <div class="audio-time">
@@ -105,20 +108,23 @@
     </div>
 
     <div class="right">
-    <div class="listentogether-info" v-if="isListentogether && listentogetherRoomDetial">
-      <span class="tip">当前正在一起听</span>
-      <div class="room-user">
-        <div class="user" v-for="user in listentogetherRoomDetial.roomUsers">
-          <img :src="user.avatarUrl" alt="" :title="user.nickname">
-        </div>
-        <div class="wait-friend" v-if="listentogetherRoomDetial?.roomUsers?.length <= 1 && listentogetherRoomDetial?.roomType === 'FRIEND'" @click="showListentogetherInvite = true">
-          <Icon icon="material-symbols:add" class="icon1"/>
+      <div class="listentogether-info" v-if="isListentogether && listentogetherRoomDetial">
+        <span class="tip">当前正在一起听</span>
+        <div class="room-user">
+          <div class="user" v-for="user in listentogetherRoomDetial.roomUsers">
+            <img :src="user.avatarUrl" alt="" :title="user.nickname">
+          </div>
+          <div class="wait-friend"
+            v-if="listentogetherRoomDetial?.roomUsers?.length <= 1 && listentogetherRoomDetial?.roomType === 'FRIEND'"
+            @click="showListentogetherInvite = true">
+            <Icon icon="material-symbols:add" class="icon1" />
+          </div>
         </div>
       </div>
-    </div>
-      <div class="lyric" ref="lyricContainer" :style="musicPlayerLyricGrow ? '--glow: #ffffff77;' : ''" v-show="rightDisplayType === 'lyric'">
+      <div class="lyric" ref="lyricContainer" :style="musicPlayerLyricGrow ? '--glow: #ffffff77;' : ''"
+        v-show="rightDisplayType === 'lyric'">
         <span style="margin-top: 50%;"></span>
-        <div class="lyric-cell" v-for="lrc in lyric" :class="{ blur: musicPlayerLyricBlur }">
+        <div class="lyric-cell" v-for="lrc in lyric" :class="{ blur: musicPlayerLyricBlur }" @click="jumpLyricTime(lrc)">
           <div class="normal" v-if="!lrc?.gap && !lrc.subLyric">
             <p v-if="lrc?.text" class="lrc">{{ lrc?.text }}</p>
             <p v-if="lrc.tlyric" class="tns">{{ lrc?.tlyric }}</p>
@@ -158,15 +164,15 @@
 
     <!--右键菜单-->
     <ContextMenu :menu="[
-      { label: audioState.state !== 'play' ? '播放' : '暂停', act: 'play',icon:audioState.state !== 'play' ? 'material-symbols-light:pause' : 'ion:play' },
-      { label: '上一首', act: 'previous' ,icon:'fluent:previous-20-filled'},
-      { label: '下一首', act: 'next' ,icon:'fluent:next-20-filled' },
-      { label: '均衡器' ,act:'equalizer' ,icon:'material-symbols:equalizer-rounded'},
+      { label: audioState.state !== 'play' ? '播放' : '暂停', act: 'play', icon: audioState.state !== 'play' ? 'material-symbols-light:pause' : 'ion:play' },
+      { label: '上一首', act: 'previous', icon: 'fluent:previous-20-filled' },
+      { label: '下一首', act: 'next', icon: 'fluent:next-20-filled' },
+      { label: '均衡器', act: 'equalizer', icon: 'material-symbols:equalizer-rounded' },
       'hr',
-      {label:'喜欢',act:'like',icon:'ri:hearts-fill'},
-      {label:'收藏',act:'collect',icon:'fluent:collections-20-filled'},
-      { label: '分享',act:'share',icon:'majesticons:share' },
-      {label:'浏览器打开',act:'browser',icon:'mdi:web'},
+      { label: '喜欢', act: 'like', icon: 'ri:hearts-fill' },
+      { label: '收藏', act: 'collect', icon: 'fluent:collections-20-filled' },
+      { label: '分享', act: 'share', icon: 'majesticons:share' },
+      { label: '浏览器打开', act: 'browser', icon: 'mdi:web' },
     ]" @select="(e) => handleContextMenu(e)">
     </ContextMenu>
 
@@ -195,7 +201,7 @@
       <h1>邀请好友一起听</h1>
       <div class="other-method">
         <button class="act" @click="copyInviteLink">
-          <Icon icon="bx:link" class="icon2"/>
+          <Icon icon="bx:link" class="icon2" />
 
         </button>
       </div>
@@ -212,30 +218,29 @@ import VueSlider from 'vue-slider-component'
 import { Icon } from '@iconify/vue'
 import temp from '@/store/temp'
 import { s2mmss } from '@/utils/libs'
-import { chrous } from '@/musicplayer'
 import { ref } from 'vue'
-import { lyricArea, lyricIndex, changeLyric } from '@/musicplayer/lyric'
+import { lyricArea, lyricIndex } from '@/musicplayer/lyric'
 import ModalWindow from '../windows/ModalWindow.vue'
 import { player } from '@/main'
 import { computedHighlight } from '@/api/lyric'
 import { getColor } from '@/musicplayer/color'
-import { LyricController, DynamicBackground ,AudioWaveDrawer} from './main'
+import { DynamicBackground } from './main'
+import { LyricScroller } from './lyric_scroller'
 import { onUnmounted } from 'vue'
-import { onBeforeRouteLeave, onBeforeRouteUpdate } from 'vue-router'
 const showModalWindow = ref(false)
 const showListentogetherInvite = ref(false)
 const rightDisplayType = ref('lyric')
 const audio = temp.audio
 const progress = computed({
-  get: () => { return store.state.audioState.ct / store.state.audioState.dt },
+  get: () => { return store.state.audioState.ct / store.state.audioState.dt || 0 },
   set: (val) => {
     const time = val * store.state.audioState.dt
     player.seek(time)
   }
 })
 const volume = computed({
-  get:()=>{return store.state.audioState.volume},
-  set:(val)=>{
+  get: () => { return store.state.audioState.volume },
+  set: (val) => {
     player.setVolume(val)
   }
 })
@@ -277,84 +282,91 @@ const enableDynamicCover = computed(() => {
 const lyric = computed(() => {
   return store.state.lyric
 })
-const listentogetherRoomDetial = computed(()=>{
+const listentogetherRoomDetial = computed(() => {
   return store.state.listentogetherRoomDetial
 })
-const isListentogether = computed(()=>{
+const isListentogether = computed(() => {
   return store.state.inListentogetherRoom
 })
-console.log(lyric)
 const lyricContainer = ref(null)
 const mainCover = ref(null)
 const dynamic = ref(null)
-const waver = ref(null)
 const colorGroup = ref({ mainColor: [0, 0, 0] })
 let onDraw = false
+
+
+
 onMounted(() => {
-  const lyricController = new LyricController(lyricContainer.value)
+
+  const lyricScroller = new LyricScroller(lyricContainer.value, {
+    highlightClassName: 'highlight'
+  })
   const dynamicBackground = new DynamicBackground(dynamic.value, mainCover.value)
-  // const audioWaveDrawer = new AudioWaveDrawer(waver.value)
   onDraw = true
-  function scrollLyric() {
-    if(rightDisplayType.value !== 'lyric'){return}
-    const highlight = computedHighlight(lyric.value, player.audioManager.currentTime)
-    if (highlight) {
-      const et = isListentogether.value ? 0 : 0
-      lyricController.scroll(highlight.index, 1, false, highlight?.highlightSentence?.subLyric,et)
-      if(highlight?.highlightSentence?.gap){
-        lyricController.countGap(highlight,player.audioManager.currentTime)
-      }
+
+  const scrollLyric = function (e) {
+    const time = player.audioManager.currentTime
+    const {index,highlightSentence} = computedHighlight(lyric.value,time)
+    if(highlightSentence.gap){
+      lyricScroller.countGap({
+        index:index + 1,
+        time,
+        delay:highlightSentence?.delay,
+        next:highlightSentence?.next
+      })
     }
+    lyricScroller.scroll(index + 1 )
   }
+  player.audioManager.on('timeupdate', scrollLyric)
+  mainCover.value.addEventListener('load', renderColor)
+
+
+  onUnmounted(() => {
+    onDraw = false
+    player.audioManager.off('timeupdate', scrollLyric)
+    lyricScroller.destroy()
+  })
+  watch(musicInfo, () => {
+    lyricScroller.reset()
+    console.log(lyric.value)
+  })
+
   function renderColor() {
     getColor(mainCover.value).then(color => {
       colorGroup.value = color
     })
   }
-  // function frequencyVisualize(){
-  //   if(!onDraw){return}
-  //   requestAnimationFrame(frequencyVisualize)
-  //   const data = player.audioManager.frequencyAnalyser.getByteFrequencyData()
-  //   audioWaveDrawer.renderFrame(data)
-  // }
 
-  player.audioManager.on('timeupdate',scrollLyric)
-  mainCover.value.addEventListener('load', renderColor)
   scrollLyric()
   dynamicBackground.start()
-  watch(musicInfo, () => {
-    lyricController.start()
-    console.log(lyric.value)
-  })
+
   // frequencyVisualize()
 })
-onUnmounted(()=>{
-  onDraw = false
-})
+
 
 function handleContextMenu(e) {
   const act = e.act
   const actions = {
-    play:()=>{
+    play: () => {
       player.playOrPause()
     },
-    previous:()=>{
+    previous: () => {
       player.previous()
     },
-    next:()=>{
+    next: () => {
       player.next()
     },
-    equalizer:()=>{
-      store.commit("showEqualizer",true)
+    equalizer: () => {
+      store.commit("showEqualizer", true)
     },
-    browser:()=>{
+    browser: () => {
       const url = `https://music.163.com/#/song?id=${musicInfo.value?.id}`
-      window.electron.ipcRenderer.send('app:openWebView',url)
+      window.electron.ipcRenderer.send('app:openWebView', url)
     },
   }
-  if(actions[act]){
-      actions[act]()
-    }
+  if (actions[act]) {
+    actions[act]()
+  }
 }
 function togglePlaylisyBar() {
   if (showPlaylistBar.value) {
@@ -366,13 +378,17 @@ function togglePlaylisyBar() {
 function useDesktopLyric() {
   window.electron.ipcRenderer.send('useDesktopLyric')
 }
-function copyInviteLink(){
+function copyInviteLink() {
   const roomId = listentogetherRoomDetial.value.roomId
   const creatorId = listentogetherRoomDetial.value.creatorId
   const songId = musicInfo.value.id
 
   const link = `邀请你一起听《${musicInfo.value.name}》,加入链接：https://st.music.163.com/listen-together/share/?songId=${songId}&roomId=${roomId}&inviterId=${creatorId}`
   window.navigator.clipboard.writeText(link)
+}
+
+function jumpLyricTime(lyric){
+  player.seek(lyric.timestamp)
 }
 </script>
 <style scoped>
@@ -389,7 +405,7 @@ function copyInviteLink(){
 }
 
 .music-player {
-  --edge-gap:10%;
+  --edge-gap: 10%;
   width: 100%;
   height: 100%;
   position: fixed;
@@ -408,16 +424,18 @@ function copyInviteLink(){
   top: 3.5rem;
   z-index: 3;
 
-  .icon2{
+  .icon2 {
     width: 2.5rem;
     height: 2.5rem;
   }
 }
+
 @keyframes background-fade {
-  from{
+  from {
     opacity: 0;
   }
 }
+
 .background {
   width: 100%;
   height: 100%;
@@ -428,7 +446,7 @@ function copyInviteLink(){
   overflow: hidden;
 
   background: #1d1d1d;
-  animation:  background-fade .6s;
+  animation: background-fade .6s;
 }
 
 .background .image-background {
@@ -439,12 +457,14 @@ function copyInviteLink(){
   filter: blur(20px) brightness(0.4) saturate(1.2);
   transform: scale(1.1);
 }
+
 @keyframes left-enter {
-  from{
+  from {
     transform: translateX(70px);
     opacity: 0;
   }
 }
+
 .left {
   width: 24rem;
   height: fit-content;
@@ -454,7 +474,7 @@ function copyInviteLink(){
   flex-direction: column;
   justify-content: space-between;
   /* animation:  left-enter .6s ease; */
-  gap:15px;
+  gap: 15px;
   transition: .3s ease-in-out;
 }
 
@@ -521,11 +541,15 @@ function copyInviteLink(){
   transform: scale(1.1);
   opacity: 0.3;
 }
-.left .cover:hover{
-  .main-cover,.dynamic-cover{
+
+.left .cover:hover {
+
+  .main-cover,
+  .dynamic-cover {
     transform: scale(1.02);
   }
 }
+
 .left .cover .dynamic-cover {
   width: 100%;
   height: 100%;
@@ -545,7 +569,7 @@ function copyInviteLink(){
   height: fit-content;
   display: flex;
   flex-direction: row;
-  justify-content:space-around;
+  justify-content: space-around;
   gap: 1.9rem;
   align-items: center;
   margin-left: auto;
@@ -594,72 +618,85 @@ function copyInviteLink(){
 .left .functions button .icon1 {
   opacity: 1;
 }
-.left .functions .volume-button{
+
+.left .functions .volume-button {
   margin-left: auto;
   margin-right: 0;
 }
-.left .functions .volume-slider{
+
+.left .functions .volume-slider {
   width: 30%;
   height: 4px;
 }
+
 @keyframes lyric-enter {
-  from{
+  from {
     opacity: 0;
     filter: blur(5px);
   }
 }
+
 .right {
   flex: 1;
-  height: 79%;
+  height: 90%;
   margin: auto var(--edge-gap) auto var(--edge-gap);
   position: relative;
   overflow: visible;
   display: flex;
   flex-direction: column;
 }
+
 @keyframes listentogether-enter {
-  from{
+  from {
     transform: translateY(-15px);
     opacity: 0;
   }
 }
-.right .listentogether-info{
-  height:4rem;
+
+.right .listentogether-info {
+  height: 4rem;
   width: auto;
   display: flex;
   flex-direction: column;
   gap: 0.7rem;
- margin-bottom: 2rem;
+  margin-bottom: 2rem;
   animation: listentogether-enter 0.3s ease-in-out;
 }
-.right .listentogether-info .tip{
+
+.right .listentogether-info .tip {
   color: var(--text-o-2);
   color: white;
   font-size: 0.9rem;
 }
-.right .listentogether-info .room-user{
+
+.right .listentogether-info .room-user {
   display: flex;
   flex-direction: row;
   gap: 1rem;
 }
-.right .listentogether-info .room-user .user,.wait-friend{
+
+.right .listentogether-info .room-user .user,
+.wait-friend {
   width: 3rem;
   height: 3rem;
   aspect-ratio: 1/1;
   position: relative;
 }
-.right .listentogether-info .room-user .user img{
+
+.right .listentogether-info .room-user .user img {
   width: 100%;
   height: 100%;
-  border-radius:50%;
+  border-radius: 50%;
 }
-.right .listentogether-info .room-user .wait-friend{
+
+.right .listentogether-info .room-user .wait-friend {
   background-color: #242424ca;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
 }
+
 .right .lyric {
   width: auto;
   height: 94%;
@@ -668,7 +705,7 @@ function copyInviteLink(){
   flex-direction: column;
   mask: linear-gradient(transparent 0%, #000 20%, #000 70%, transparent);
   overflow: visible;
-  
+
 }
 
 .right .lyric .lyric-cell {
@@ -677,7 +714,6 @@ function copyInviteLink(){
   height: fit-content;
   display: flex;
   flex-direction: column;
-  border-radius: 0.4rem;
   transition: 0.5s ease-in-out;
 
   .normal {
@@ -710,6 +746,7 @@ function copyInviteLink(){
     font-weight: 600;
     transition: 0.2s ease-in-out;
   }
+
   .gap {
     width: fit-content;
     display: flex;
@@ -719,8 +756,9 @@ function copyInviteLink(){
     opacity: 0;
     transform: scale(0.5);
     transform-origin: center center;
-    transition: .2s cubic-bezier(.51,0,0,.98);
+    transition: .2s cubic-bezier(.51, 0, 0, .98);
   }
+
   .ball {
     display: block;
     width: 18px;
@@ -730,6 +768,7 @@ function copyInviteLink(){
     transition: .3s;
     opacity: 0;
   }
+
   .sub {
     display: flex;
     flex-direction: column;
@@ -739,6 +778,7 @@ function copyInviteLink(){
     transition: .3s cubic-bezier(0.075, 0.82, 0.165, 1);
     transform: translateY(-20px);
   }
+
   .sub .lrc {
     transition: inherit;
     transform-origin: left;
@@ -748,6 +788,16 @@ function copyInviteLink(){
     font-weight: 600;
     font-size: 15px;
   }
+}
+.right .lyric .lyric-cell:hover *{
+  opacity: 1 !important;
+}
+.right .lyric .lyric-cell:hover{
+  filter: none !important;
+  /* padding-left: 0.9rem;
+  border-left: 4px solid rgba(255, 255, 255, 0.488);
+  box-sizing: border-box; */
+  transition: .3s;
 }
 .blur {
   filter: blur(2px);
@@ -764,7 +814,7 @@ function copyInviteLink(){
 
   .lrc {
     overflow: visible;
-    transform: scale(1.2) translateY(-3px);
+    font-size:36px !important;
     opacity: 1 !important;
   }
 
@@ -799,27 +849,33 @@ function copyInviteLink(){
   .normal-word {
     opacity: 1 !important;
   }
-  .gap{
+
+  .gap {
     opacity: 1 !important;
     transform: scale(1) !important;
   }
-  .ball:nth-child(1){
+
+  .ball:nth-child(1) {
     opacity: var(--count-a) !important;
     transform: translateY(calc(-8px * calc(1 - var(--count-a)))) !important;
   }
-  .ball:nth-child(2){
+
+  .ball:nth-child(2) {
     opacity: var(--count-b) !important;
     transform: translateY(calc(-8px * calc(1 - var(--count-b)))) !important;
   }
-  .ball:nth-child(3){
+
+  .ball:nth-child(3) {
     opacity: var(--count-c) !important;
     transform: translateY(calc(-8px * calc(1 - var(--count-c)))) !important;
   }
+
   .sub {
     opacity: 1 !important;
     transform: translateY(0px) !important;
   }
 }
+
 .right .lyric::-webkit-scrollbar {
   display: none;
 }
@@ -875,7 +931,7 @@ function copyInviteLink(){
   z-index: 2;
   opacity: 1;
   /**blur(500px) saturate(1.2) */
-  transition:  .6s;
+  transition: .6s;
 }
 
 button {
@@ -928,12 +984,12 @@ button:hover {
   background-color: #fff !important;
 }
 
-.waver{
+.waver {
   width: 100%;
-  height:50px;
+  height: 50px;
 }
 
-.other-method .act{
+.other-method .act {
   width: fit-content;
   height: fit-content;
   padding: 0.4rem;
