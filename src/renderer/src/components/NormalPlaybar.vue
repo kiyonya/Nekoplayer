@@ -2,7 +2,7 @@
   <div class="n-playbar">
     <div class="bg" ></div>
     <VueSlider class="slider" width="100%" height="4px" @click.stop :dot-size="0" tooltip="none"  v-model="progress" :min="0" :max="1" :interval="0.01" :use-keyboard="true" 
-    :process-style="{background:'rgb(109,118,255)'}"
+    :process-style="{background:'var(--strong)'}"
      ></VueSlider>
 
     <div class="music-info">

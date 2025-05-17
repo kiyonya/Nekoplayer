@@ -16,11 +16,12 @@ export default {
     backgroundImageFit:'cover',
     backgroundImageOpacity:0.3,
     backgroundImageBlur:0,
-    
+    ui:[133, 141, 255],
     backgroundImageBrightness:1,
     backgroundImageSaturate:1,
+    backgroundImageScale:1,
     bloomColor:undefined,
-    font:'system-ui'
+    font:'misans'
   },
   profile:{},
   loginStatus:parseInt(localStorage.getItem('loginStatus') || 1),

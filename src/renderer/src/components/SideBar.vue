@@ -1,7 +1,7 @@
 <template>
   <aside class="side-bar">
 
-    <div class="user">
+    <div class="user" @click="$router.push({name:'User',params:{id:profile.userId}})">
       <img :src="resize(profile.avatarUrl,60)" alt="" class="avatar">
       <h2>{{ profile?.nickname }}</h2>
       <span v-if="!isLogin" @click="store.commit('showLoginWindow',true)">未登录</span>

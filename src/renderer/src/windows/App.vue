@@ -1,7 +1,6 @@
 <template>
   <div>
-
-    <img class="app-bg-img" v-if="theme.backgroundMode === 'image' && theme.backgroundImage" :style="{filter:`blur(${theme.backgroundImageBlur}px) brightness(${theme.backgroundImageBrightness}) saturate(${theme.backgroundImageSaturate})`,opacity:theme.backgroundImageOpacity,objectFit:theme.backgroundImageFit}" :src="theme.backgroundImage"/>
+    <img class="app-bg-img" v-if="theme.backgroundMode === 'image' && theme.backgroundImage" :style="{filter:`blur(${theme.backgroundImageBlur}px) brightness(${theme.backgroundImageBrightness}) saturate(${theme.backgroundImageSaturate})`,opacity:theme.backgroundImageOpacity,objectFit:theme.backgroundImageFit,transform:`scale(${theme.backgroundImageScale})`}" :src="theme.backgroundImage"/>
 
     <div class="app-bg-bloom" v-if="theme.backgroundMode === 'bloom'" :style="`--b:rgb(${store.state.bloomColor})`"></div>
 
@@ -19,7 +18,7 @@
     <div class="app-view">
       
       <router-view v-slot="{ Component }" @scroll="debounceScroll($event)" ref="routerView">
-          <KeepAlive :max="10" :include="['Recommend', 'LocalMusic','Artist','Library','Search','Comment','LocalMusicGroup']">
+          <KeepAlive :max="10" :include="['Recommend', 'LocalMusic','Artist','Library','Search','Comment','LocalMusicGroup','Setting']">
             <component :is="Component" class="router-view" :key="$route.fullPath" />
           </KeepAlive>
       </router-view>
@@ -141,6 +140,7 @@ function totop(){
   height: 100vh;
   position: fixed;
   z-index: -1;
+  transition: .3s;
 }
 .app-bg-bloom{
   width: 100vw;

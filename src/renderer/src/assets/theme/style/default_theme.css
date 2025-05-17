@@ -12,9 +12,9 @@ html[data-theme='dark'] {
   --hover: rgb(32,32,42);
   --border: rgba(87, 87, 87, 0.321);
   --border-light: rgb(109, 109, 109);
-  --strong: rgb(133, 141, 255);
-  --strong-light: rgb(109, 118, 255);
-  --strong-dark: rgb(44, 52, 204);
+  /* --strong: rgb(133, 141, 255);
+  --strong-light: rgb(131, 139, 255);
+  --strong-dark: rgb(44, 52, 204); */
   --strong-background: #6970eb;
   --progress-background: rgb(218, 220, 223);
   --progress-progress: rgb(61, 179, 252);
@@ -60,7 +60,7 @@ html[data-theme='dark'] {
 
 
   .onplay {
-    background-color: var(--strong-light) !important;
+    background-color: var(--strong) !important;
     color: #fff !important;
   }
 
@@ -86,10 +86,10 @@ html[data-theme='light'] {
   --hover: rgba(220, 220, 220, 0.7);
   --border: rgb(218, 220, 223);
   --border-light: rgb(228, 230, 233);
-  --strong: rgb(121, 130, 255);
+  /* --strong: rgb(121, 130, 255);
   --strong-light: rgb(109, 118, 255);
   --strong-dark: rgb(44, 52, 204);
-  --strong-background: #6970eb;
+  --strong-background: #6970eb; */
   --progress-background: rgb(218, 220, 223);
   --progress-progress: rgb(61, 179, 252);
   --progress-thumb: rgb(242, 244, 248);
@@ -134,7 +134,7 @@ html[data-theme='light'] {
 
 
   .onplay {
-    background-color: var(--strong-light) !important;
+    background-color: var(--strong) !important;
     color: #fff !important;
   }
 

@@ -390,11 +390,12 @@ export function registIPC(windowManager) {
     }
   })
   ipcMain.handle('dialog:openFile', async (e, opt) => {
-    const { title = '选择文件', defaultPath = app.getPath('music'), properties = [] } = opt || {}
+    const { title = '选择文件', defaultPath = '', properties = [] ,filters = []} = opt || {}
     const result = await dialog.showOpenDialog(windowManager.getWindow('main'), {
       properties: ['openFile', ...properties],
       title,
-      defaultPath
+      defaultPath,
+      filters
     })
     if (result.canceled) {
       return undefined
