@@ -1,5 +1,5 @@
 <template>
-  <ModalWindow :mask="true" @close="closeWindow">
+  <ModalWindow :mask="false" @close="closeWindow">
     <div class="login">
       <!-- 二维码扫码登录 -->
       <div class="qr-login">
@@ -22,24 +22,24 @@
           <span :class="{'hl':loginMethod == 1}" @click="loginMethod = 1">密码登录</span>
         </div>
         <!-- 短信 -->
-        <method id="短信登录" v-if="loginMethod == 0" class="mth">
-          <input type="text" name="" id="" placeholder="请输入手机号">
+        <div  v-if="loginMethod == 0" class="mth">
+          <input type="text" name="" placeholder="请输入手机号" v-model="loginAsCaptcha.phone">
           <div class="code">
-            <input type="text" placeholder="请输入验证码" >
-            <button class="get-code">获取验证码</button>
+            <input type="text" placeholder="请输入验证码" v-model="loginAsCaptcha.captcha">
+            <button class="get-code" @click="getCaptcha">{{ captchaFreeze ? captchaFreeze : "获取验证码" }}</button>
           </div>
-          <button class="dologin">登录</button>
-        </method>
+          <button class="dologin" @click="phoneAndCaptchaLogin">登录</button>
+        </div>
         <!-- 密码 -->
-        <method id="密码登录" v-if="loginMethod == 1" class="mth">
-          <input type="text" placeholder="请输入手机号">
+        <div  v-if="loginMethod == 1" class="mth">
+          <input type="text" placeholder="请输入手机号" v-model="loginAsPassword.phone">
           <div class="password">
-            <input type="text" placeholder="请输入密码">
+            <input type="text" placeholder="请输入密码" v-model="loginAsPassword.password">
             <!-- 可见 -->
             <!-- 不可见 -->
           </div>
-          <button class="dologin">登录</button>
-        </method>
+          <button class="dologin" @click="phoneAndPasswordLogin">登录</button>
+        </div>
         
 
         <!-- 更多 -->
@@ -65,8 +65,7 @@
 </template>
 <script setup>
 import ModalWindow from './windows/ModalWindow.vue'
-import { getQRKey, getQRImg, checkQR, sendCaptcha, verifyCaptcha, anonimousLogin, refreshProfile, login } from '../api/auth'
-import { setCookie } from '../api/cookie'
+import { getQRKey, getQRImg, checkQR, sendCaptcha, login,cellphoneLogin } from '../api/auth'
 import { store } from '@/store'
 import { ref } from 'vue'
 import { computed } from 'vue'
@@ -74,7 +73,6 @@ import { onMounted } from 'vue'
 import { onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
 const showQRMask = ref(false)
-const crypto = require('crypto')
 const loginStatus = computed({
   get: () => store.state.loginStatus,
   set: (val) => {
@@ -89,7 +87,6 @@ const loginAsCaptcha = ref({
 const loginAsPassword = ref({
   phone: '',
   password: '',
-  enc: 'md5'
 })
 const qrimg = ref('')
 const qrmsg = ref('扫描二维码以登录')
@@ -113,6 +110,7 @@ function getQRcodeLogin() {
         qrmsg.value = '登录成功'
         clearInterval(qrChecker)
         resolve(qrStatus.cookie)
+        closeWindow()
       }
     }, 1000)
   })
@@ -135,7 +133,9 @@ async function getCaptcha() {
   const phone = loginAsCaptcha.value.phone
   if (!phone) { return }
   const data = await sendCaptcha(phone)
-  if (!data?.data) { return }
+  if (!data?.data) { 
+    alert(data?.message)
+    return }
   captchaFreeze.value = 60
   let timer = setInterval(() => {
     if (captchaFreeze.value <= 0) {
@@ -150,12 +150,26 @@ async function phoneAndCaptchaLogin() {
   const phone = loginAsCaptcha.value.phone
   const captcha = loginAsCaptcha.value.captcha
   if (!phone || !captcha || captcha.length !== 4) { return }
-  const verify = await verifyCaptcha(phone, captcha)
-  if (verify?.data === true) {
-    //登陆成功 进行检查和更新
-    document.cookie
-  }
+  const loginAuth = await cellphoneLogin({
+    phone,captcha
+  })
+  console.log(loginAuth)
 }
+
+async function phoneAndPasswordLogin() {
+  const phone = loginAsPassword.value.phone
+  const password = loginAsPassword.value.password
+  if (!phone || !password) { return }
+  const loginAuth = await cellphoneLogin({
+    phone,password
+  })
+  console.log(loginAuth)
+}
+
+
+
+
+
 onMounted(() => {
   loginAsQRCode()
 })
@@ -294,6 +308,7 @@ button{
     height: fit-content;
     button{
       height: 100%;
+      min-width: 6rem;
     }
 
     input{

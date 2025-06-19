@@ -9,7 +9,6 @@ export default class Toolkit {
             url: `/lyric?id=${id}`
         })
         const lyric = data.lrc.lyric
-        console.log(lyric)
         if(lyric){
             const path = await window.api.dialogSaveFile({
                 title: '保存歌词',
@@ -18,11 +17,9 @@ export default class Toolkit {
                 ],
                 defaultPath: filename
             })
-            console.log(path)
             if(path){
                 const buffer = new TextEncoder().encode(lyric)
                 const res = await window.api.writeFile(path,buffer)
-                console.log(res)
             }
         }
     }
@@ -39,7 +36,6 @@ export default class Toolkit {
             if(path){
                 const buffer = new TextEncoder().encode(JSON.stringify(nlo))
                 const res = await window.api.writeFile(path,buffer)
-                console.log(res)
             }
         }
     }

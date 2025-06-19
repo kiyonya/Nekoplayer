@@ -1,111 +1,101 @@
 <template>
   <div class="album page">
-    <HeadInfo
-      class="head"
-      :cover="info.picUrl"
-      :name="info.name"
-      :subtitle="info.artist ? info.artist.name : null"
+    <HeadInfo class="head" :cover="info.picUrl" :name="info.name" :subtitle="info.artist ? info.artist.name : null"
       @subtitleclick="
         () => {
-          this.$router.push({ name: 'Artist', params: { id: info.artist.id } })
+          $router.push({ name: 'Artist', params: { id: info.artist.id } })
         }
-      "
-      :maininfo="`最后更新于${getDate(info.publishTime)} · ${info.size}首歌`"
-      :info="`©${info.company || null}`"
-      :desc="info.description"
-      @descClick="showDesc = true"
-      @playall="player.playAlbum(null,null,{type:'album',id:id},true)"
-      @addlist="player.insertAlbumCandy(pid,{type:'album',id:id})"
-    ></HeadInfo>
+      " :maininfo="`最后更新于${getDate(info.publishTime)} · ${info.size}首歌`" :info="`©${info.company || null}`"
+      :desc="info.description" @descClick="showDesc = true"
+      @playall="player.playAlbum(null, null, { type: 'album', id: id }, true)"
+      @addlist="player.insertAlbumCandy(pid, { type: 'album', id: id })"></HeadInfo>
 
     <div class="tracks">
       <div class="section" v-for="(value, key, index) in tracks">
-        <span class="disc" :class="index >= 1 ? 'margin' : ''"
-          ><span>Disc {{ key }}</span></span
-        >
-        <Song_NoCover
-          v-for="(song, index) in value"
-          :trackDetial="{
-            name: song.name,
-            cover: song.al.picUrl,
-            artist: song.ar,
-            album: song.al,
-            id: song.id,
-            duration: song.dt,
-            tns: song.tns || null,
-            alia: song.alia,
-            mv: song.mv
-          }"
-          :source="{
+        <span class="disc" :class="index >= 1 ? 'margin' : ''"><span>Disc {{ key }}</span></span>
+        <Song_NoCover v-for="(song, index) in value" :trackDetial="{
+          name: song.name,
+          cover: song.al.picUrl,
+          artist: song.ar,
+          album: song.al,
+          id: song.id,
+          duration: song.dt,
+          tns: song.tns || null,
+          alia: song.alia,
+          mv: song.mv
+        }" :source="{
             type: 'album',
-            id: this.id,
-          }"
-          :index="index"
-          @play="playTrack"
-        ></Song_NoCover>
+            id:id,
+          }" :index="index" @play="playTrack"></Song_NoCover>
       </div>
     </div>
 
-    <Window_Description
-      v-if="showDesc"
-      @close="showDesc = false"
-      :title="info.name"
-      :ctx="[{ ti: '专辑描述', txt: info.description }]"
-      :subname="info.artist.name"
-    ></Window_Description>
+    <ModalWindow :mask="false" @close="showDesc = false" v-if="showDesc">
+      <div class="album-desc">
+        <div class="info">
+          <img :src="info.picUrl" alt="">
+          <div class="detail">
+            <h2>{{ info.name }}</h2>
+            <ArtistNameGroup :array="info.artists"></ArtistNameGroup>
+          </div>
+        </div>
+        <div class="content">
+          <p v-html="info.description.replace(/\n/gi, '<br>')"></p>
+        </div>
+
+      </div>
+    </ModalWindow>
+
   </div>
 </template>
-<script>
+<script setup>
 import * as req_album from '../api/album'
 import Song_NoCover from '@/components/Song_NoCover.vue'
 import { getDate } from '@/utils/timers'
-import Window_Description from '@/components/Window_Description.vue'
-import { ref } from 'vue'
+import { ref,onMounted,onUnmounted } from 'vue'
 import ArtistNameGroup from '@/components/ArtistNameGroup.vue'
 import HeadInfo from '@/components/HeadInfo.vue'
 import { player } from '@/main'
+import ModalWindow from '@/components/windows/ModalWindow.vue'
 
-export default {
-  name: 'Album',
-  components: { Song_NoCover, Window_Description, ArtistNameGroup, HeadInfo },
-  data() {
-    return {
-      info: ref({}),
-      tracks: ref({}),
-      showDesc: false,
-      player
-    }
-  },
-  methods: {
-    async loadAlbum(alid) {
-      const al = await req_album.getAlbum(alid)
-      this.info = al.album
-      const res = {}
-      al.songs.forEach((song) => {
-        const cd = song.cd
-        if (!res[cd]) {
-          res[cd] = new Array()
-        }
-        res[cd].push(song)
-      })
-      this.tracks = res
-      console.log(res)
-    },
-    getDate,
-    playTrack(id){
-      player.playAlbum(id,null,{type:'album',id:this.id})
-    }
-  },
-  created() {
-    this.loadAlbum(this.id)
-  },
-  props: ['id']
+const props = defineProps(['id'])
+const info = ref({})
+const tracks = ref({})
+const showDesc = ref(false)
+const loadAlbum = async (alid) => {
+  try {
+    const al = await req_album.getAlbum(alid)
+    info.value = al.album
+    const res = {}
+    al.songs.forEach((song) => {
+      const cd = song.cd
+      if (!res[cd]) {
+        res[cd] = []
+      }
+      res[cd].push(song)
+    })
+    tracks.value = res
+  } catch (error) {
+    console.error('Failed to load album:', error)
+  }
 }
+const playTrack = (id) => {
+  player.playAlbum(id, null, { type: 'album', id: props.id })
+}
+onMounted(() => {
+  Promise.resolve().then(loadAlbum(props.id))
+})
+onUnmounted(()=>{
+  info.value = null
+  tracks.value = null
+  window.webFrame.clearCache()
+})
 </script>
 <style scoped>
 .head {
   margin-top: 2rem;
 }
+
 .disc {
   width: 100%;
   height: 2rem;
@@ -170,43 +160,7 @@ export default {
   opacity: 0.4;
 }
 
-.album-detial {
-  position: relative;
-  width: 50%;
-  height: 100%;
-  margin-left: 1.5rem;
-  display: flex;
-  flex-direction: column;
-  color: var(--text-color);
-  flex: 1;
-}
 
-.album-detial .name {
-  font-size: 2.3rem;
-}
-
-.album-detial .info {
-  font-size: 1.3rem;
-  opacity: var(--text-opacity-1);
-  margin-top: 1.8rem;
-}
-.album-detial .company {
-  font-size: 1rem;
-  opacity: var(--text-opacity-4);
-}
-
-.album-detial .tags {
-  display: flex;
-  flex-direction: row;
-  gap: 0.9rem;
-  font-size: 0.8rem;
-}
-
-.album-detial .tags span {
-  background: var(--app-theme-component);
-  padding: 0.1rem 0.5rem;
-  border-radius: 1rem;
-}
 
 .desc {
   width: 50vw;
@@ -271,5 +225,52 @@ export default {
   font-weight: 600;
   font-size: 1.5rem;
   margin-top: 0.3rem;
+}
+
+.album-desc{
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  overflow-y: auto;
+
+  .content{
+
+    width: 30rem;
+    height: 18rem;
+    overflow-y: auto;
+    color: var(--text-o-1);
+  }
+
+  .info{
+    display: flex;
+    flex-direction: row;
+    color: var(--text);
+    gap: 0.5rem;
+    align-items: center;
+
+    img{
+      width: 4rem;
+      height: 4rem;
+      object-fit: cover;
+      border-radius: var(--br-1);
+    }
+
+    .detail{
+      color: inherit;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      height: fit-content;
+
+      h2{
+        color: var(--text);
+        font-size: 1.2rem;
+        font-weight: 600;
+        max-width: 25rem;
+      }
+    }
+  }
 }
 </style>

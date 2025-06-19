@@ -362,6 +362,26 @@ export class LocalMusic {
     })
     return songs
   }
+  /**
+   * 
+   * @param {Array} files 
+   */
+  async checkFileExists(songs){
+    const map = new Map()
+    for(let i of songs){
+      map.set(i.path,i.md5)
+    }
+    const loss = await window.api.fileExists(songs.map(i=>i.path))
+    if(!loss){return null}
+    const lossMd5 = []
+    for(let path of loss){
+      lossMd5.push({
+        path,
+        md5:map.get(path)
+      })
+    }
+    return lossMd5
+  }
   async getAudioMd5(path) {
     return await window.api.getMd5(path)
   }
@@ -420,5 +440,98 @@ export class LocalMusic {
             }catch(e){}
         }
     }
+  }
+  /**
+   * 
+   * @param {Array<String>} files 
+   * @returns {Promise<Array<object>> }
+   */
+  async getLocalMusicMatchedDetial(files){
+     let meta = await window.api.audioMetaReader(files)
+     meta = meta.filter((i) => i.success)
+      let metaMd5Index = {}
+      meta.forEach((i) => {
+        metaMd5Index[i.hash] = i
+      })
+
+      const matchList = meta.map((i) => {
+        return {
+          title: i?.meta.title || '',
+          artist: i?.meta?.artist || '',
+          album: i?.meta?.album || '',
+          duration: i?.meta?.duration || 0,
+          persistId: i.hash
+        }
+      })
+
+      const matches = await matchSongsOnNcm(matchList)
+      let matchMd5Index = {}
+      for (let i in matches?.result?.ids) {
+        matchMd5Index[matches?.result?.ids[i]] = matches?.result?.songs[i]
+      }
+      let result = {}
+      const matchedMd5 = Object.keys(matchMd5Index)
+      for (let md5 of Object.keys(metaMd5Index)) {
+        const path = metaMd5Index[md5].path
+        const size = metaMd5Index[md5].size
+        const time = metaMd5Index[md5].time
+        if (matchedMd5.includes(md5)) {
+          //成功匹配
+          const matchedMeta = matchMd5Index[md5]
+          const rawMata = metaMd5Index[md5]?.meta
+          result[md5] = {
+            name: matchedMeta?.name,
+            artist: matchedMeta?.artists,
+            album: { ...matchedMeta?.album, matched: true },
+            path,
+            id: matchedMeta?.id,
+            md5,
+            tns: matchedMeta?.tns || null,
+            alias: matchedMeta?.alias || null,
+            type: 'local',
+            local: true,
+            duration: rawMata?.duration,
+            mv: matchedMeta?.mv,
+            matched: true,
+            file: path,
+            size,
+            time,
+            cover: rawMata.picture ? rawMata.picture[0].data : matchedMeta?.album?.picUrl,
+            codec:rawMata?.codec,
+            bitrate: rawMata?.bitrate,
+            lossless: rawMata?.lossless,
+          }
+        } else {
+          //没有匹配
+          const rawMata = metaMd5Index[md5]?.meta
+          result[md5] = {
+            name: rawMata?.title || path.split('\\').pop().split('.').slice(0, -1).join('.'),
+            artist: rawMata?.artists
+              ? rawMata?.artists.map((i) => {
+                  return { name: i, matched: false, id: null }
+                })
+              : [{ name: '未知', matched: false, id: null }],
+            album: { name: rawMata?.album, matched: false, id: null, picUrl: null },
+            path,
+            id: md5,
+            md5,
+            tns: null,
+            alias: null,
+            type: 'local',
+            local: true,
+            duration: rawMata?.duration,
+            mv: null,
+            matched: false,
+            file: path,
+            size,
+            time,
+            cover: rawMata.picture ? rawMata.picture[0].data : null,
+            codec:rawMata?.codec,
+            bitrate: rawMata?.bitrate,
+            lossless: rawMata?.lossless,
+          }
+        }
+      }
+      return result
   }
 }

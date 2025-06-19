@@ -17,7 +17,7 @@ export default {
   emits:['router-leave'],
   methods: {
     to(id) {
-      if (id < 0) {
+      if (id < 0 || !id) {
         return
       }
       this.$router.push({
@@ -36,7 +36,7 @@ export default {
   color: inherit;
   cursor: pointer;
   font-size: 0.85rem;
-  color: var(--text-o-4);
+  color: inherit;
 }
 .link:hover {
   text-decoration: underline;

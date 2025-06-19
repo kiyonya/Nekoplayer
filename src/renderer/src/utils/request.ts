@@ -60,6 +60,9 @@ async function request<T>(config: AxiosRequestConfig & { nocookie?: boolean; bod
       appver: osMap[os].appver,
     }
   } 
+  else{
+    body.noCookie = true
+  }
   const requestData = {
     ...restConfig,
     method,
@@ -67,7 +70,6 @@ async function request<T>(config: AxiosRequestConfig & { nocookie?: boolean; bod
     data: body ? JSON.stringify(body) : undefined,
     headers,
   };
-  //console.log(requestData)
   try {
     const response: AxiosResponse<T> = await instance(requestData);
 

@@ -1,10 +1,14 @@
 <template>
   <aside class="side-bar">
 
-    <div class="user" @click="$router.push({name:'User',params:{id:profile.userId}})">
-      <img :src="resize(profile.avatarUrl,60)" alt="" class="avatar">
+    <div class="user" @click="()=>{
+      if(isLogin){
+        $router.push({name:'User',params:{id:profile?.userId}})
+      }
+    }">
+      <img :src="resize(profile.avatarUrl,60)" alt="" class="avatar" v-if="isLogin">
       <h2>{{ profile?.nickname }}</h2>
-      <span v-if="!isLogin" @click="store.commit('showLoginWindow',true)">未登录</span>
+      <span v-if="!isLogin" @click.top="store.commit('showLoginWindow',true)">未登录</span>
     </div>
 
     <div class="routes">
@@ -27,8 +31,11 @@
         <Icon icon="mingcute:settings-3-line" class="icon tosetting" />
         <span>设置</span>
       </RouterLink>
+      <button class="route" @click="openDev">
+        <Icon icon="mdi:dev-to" class="icon"/>
+        <b style="color: orange;background: none;">dev 0.4.5</b></button>
     </div>
-
+    
     <span class="tip">快速访问</span>
     <div class="quick-find">
       
@@ -72,6 +79,10 @@ watch(isLogin,()=>{
     userPlaylist.value = []
   }
 },{immediate:true})
+
+function openDev(){
+  window.electron.ipcRenderer.send("dev:openDevTool")
+}
 </script>
 <style scoped>
 .side-bar {
@@ -94,19 +105,23 @@ watch(isLogin,()=>{
   gap: 0.4rem;
 }
 .route {
-  width: calc(100% - 1rem);
+  width:100%;
   display: flex;
   flex-direction: row;
   align-items: center;
   color: var(--text-o-4);
   text-decoration: none;
   font-weight: 500;
-  padding: 0.5rem 0.5rem;
+  padding: 0.5rem;
+  box-sizing: border-box;
   gap: 0.4rem;
   border-radius: var(--br-1);
+  border: none;  
+  background-color: transparent;
   .icon {
   width: 1.2rem;
   height: 1.2rem;
+  
   }
 }
 .route:hover{

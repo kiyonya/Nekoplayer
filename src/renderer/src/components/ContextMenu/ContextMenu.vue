@@ -72,7 +72,7 @@ function handelClick(item) {
   box-shadow: var(--shadow);
   box-sizing: border-box;
   min-width: 10rem;
-  border-radius: 0.5rem;
+  border-radius: var(--br-2);
   font-size: 1rem;
   color: var(--text);
   line-height: 1.8;

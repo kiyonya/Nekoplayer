@@ -24,7 +24,6 @@ export function initFileCache() {
   if (!exists) {
     fs.mkdirSync(fileCachePath.value, { recursive: true })
   }
-  console.log(fileCachePath.value)
 }
 /**
  * 缓存音频
@@ -41,7 +40,6 @@ export function readAudioCacheFile(id,quality,type="audio"){
     let filename = md5String([type, id, quality].join('_'))   
     let filepath = path.join(fileCachePath.value, filename + `.${type}` )
     if(!fs.existsSync(filepath)){return null} 
-    console.log(filepath)
     return filepath
 }
 export function clearAudioCache(){

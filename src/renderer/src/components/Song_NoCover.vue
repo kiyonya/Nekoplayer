@@ -108,8 +108,8 @@ export default {
   display: flex;
   flex-direction: row;
   align-items: center;
-  color: var(--text-color);
-  border-radius: 5px;
+  color: var(--text);
+  border-radius: var(--br-1);
   position: relative;
 }
 

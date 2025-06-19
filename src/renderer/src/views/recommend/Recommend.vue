@@ -12,27 +12,31 @@
         </div>
         <div class="bottom-mask"></div>
         <div class="date">
-          <Icon icon="material-symbols:calendar-today" class="icon" style="color: white" />
           {{ date?.month }}月{{ date?.date }}日
         </div>
         <h2 class="title">每日推荐</h2>
       </div>
-      <div class="recent-like-list" v-if="isLogin">
-        <h2>猜你最近喜欢</h2>
-        <div class="ctn">
-          <div class="playlist" v-for="likelist in recentLikes?.slice(0, deviceScreenSize < 1 ? 3 : 4)"
-            @click="router.push({ name: 'Playlist', params: { id: likelist?.resourceId } })">
-            <span>{{ likelist?.title }}</span>
-            <img :src="likelist?.coverUrlList[0]" alt="" />
-            <div class="text-mask"></div>
-          </div>
+      <div class="shell personalfm" :style="{ background: personalFMBackground }">
+        <img :src="personalFM?.album?.picUrl" alt="" class="cover" crossorigin="anonymous"
+          @load="getPersonalFMBackground" />
+        <div class="ep-info">
+          <h2 class="text-limit">{{ personalFM?.name }}</h2>
+          <ArtistNameGroup :array="personalFM?.artists" style="color: white;"></ArtistNameGroup>
+        </div>
+        <div class="control">
+          <button @click="player.playPersonalFM(true)">
+            <Icon icon="ion:play" class="icon" style="color: white;" />
+          </button>
+          <button @click="player.nextFM()">
+            <Icon icon="fluent:next-32-filled" class="icon" style="color: white;" />
+          </button>
         </div>
       </div>
       <div class="sing-up"></div>
     </div>
-    <div class="" @click="router.push({
+    <!-- <div class="" @click="router.push({
       name:'BillboardVocaloid'
-    })">看看周榜</div>
+    })">看看周榜</div> -->
     <div class="body">
       <div class="shell official-playlist">
         <h2 class="ti">雷达歌单</h2>
@@ -58,7 +62,7 @@
         </div>
       </div>
     </div>
-    <div class="body row" v-if="isLogin">
+    <!-- <div class="body row" v-if="isLogin">
       <div class="shell simi-recommend">
         <h2 class="ti">根据「{{ simiRecommendBaseSong?.name }}」为您推荐</h2>
         <div class="simi-recommends">
@@ -69,23 +73,18 @@
           </Song_Small>
         </div>
       </div>
-      <div class="shell personalfm" :style="{ background: personalFMBackground }">
-        <img :src="personalFM?.album?.picUrl" alt="" class="cover" crossorigin="anonymous"
-          @load="getPersonalFMBackground" />
-        <div class="ep-info">
-          <h2 class="text-limit">{{ personalFM?.name }}</h2>
-          <ArtistNameGroup :array="personalFM?.artists"></ArtistNameGroup>
-        </div>
-        <div class="control">
-          <button @click="player.playPersonalFM(true)">
-            <Icon icon="ion:play" class="icon" />
-          </button>
-          <button @click="player.nextFM()">
-            <Icon icon="fluent:next-32-filled" class="icon" />
-          </button>
-        </div>
-      </div>
-    </div>
+    </div> -->
+
+    <div class="body row"></div>
+
+
+
+
+
+
+
+
+
     <div class="body recommend-playlist">
       <h2 class="ti">推荐歌单</h2>
       <div class="recommend-playlists">
@@ -114,19 +113,25 @@
         </h2>
         <div class="songs">
           <Song_Small v-for="song in homepageStyleRCMD?.songs?.slice(0, deviceScreenSize < 1 ? 9 : 12)"
-            :name="song?.name" :cover="song?.album?.picUrl" :artist="song?.artists" :id="song?.id"
+            :name="song?.name" :cover="song?.album?.picUrl" :artist="song?.artists" :id="song?.id" :key="song?.id"
             @play="(id) => playHomepageStyleRecommendSongs(id)">
 
           </Song_Small>
         </div>
       </div>
     </div>
+    <div class="body row artist-new">
+      <div class="artist-new-card">
 
-    
+
+
+      </div>
+    </div>
+
   </div>
 </template>
 <script setup>
-import { getDailySong, getDragonBall, getRadio, getRecentLike, getHomepageBlock, getUserStylePreference } from '@/api/recommend'
+import { getDailySong, getRadio, getHomepageBlock, getUserStylePreference, getUserSubArtistsNewAlbum } from '@/api/recommend'
 import { onActivated } from 'vue'
 import { onBeforeMount } from 'vue'
 import { ref } from 'vue'
@@ -134,8 +139,6 @@ import { Icon } from '@iconify/vue'
 import {
   getRecommendPlaylist,
   getSimiSong,
-  getToplistDetial,
-  getStarpickComments
 } from '@/api/recommend'
 import PlaylistCard from '@/components/PlaylistCard.vue'
 import Song_Small from '@/components/Song_Small.vue'
@@ -145,13 +148,11 @@ import { getUserRecentListen } from '@/api/user'
 import { player } from '@/main'
 import ArtistNameGroup from '@/components/ArtistNameGroup.vue'
 import Skeleton from '@/components/Skeleton.vue';
-import { getColor } from '@/musicplayer/color'
+import { getColor } from '@/components/musicplayer/color'
 import { createLinearGradient } from '@/utils/imageProcess'
-import { watch } from 'vue'
 import router from '@/router'
-import { getPlaylistDetial } from '@/api/playlist'
 import { getMainColorFromImage } from '@/utils/color'
-import {uniqueByProp} from '@/utils'
+import { uniqueByProp } from '@/utils'
 const date = ref({
   month: 1,
   date: 1
@@ -165,12 +166,6 @@ const profile = computed(() => {
 const personalFM = computed(() => {
   return store.state.personalFM
 })
-const loginStatus = computed(() => {
-  return store.state.loginStatus
-})
-const isLogin = computed({
-  get: () => store.state.isLogin,
-})
 const dailySongs = ref([])
 const recentLikes = ref([])
 const officialPlaylist = ref([])
@@ -178,23 +173,19 @@ const simiRecommendBaseSong = ref({})
 const simiRecommend = ref([])
 const personalFMBackground = ref('')
 const recommendPlaylist = ref([])
-const artistToplist = ref({})
-const toplist = ref([])
-const rewardToplist = ref({})
-const starpickComment = ref([])
-const starpickCommentShowIndex = ref(0)
 const homepageStyleRCMD = ref({})
 const userStyle = ref([])
 const redSimiSongs = ref([])
+const subArtistsUpdate = ref([])
+import { paralleTask } from '@/utils/lazyload'
+async function getWebApiRecommendPlaylist() {
+  const data = await getRecommendPlaylist()
+  recommendPlaylist.value = data?.result.slice(1)
 
-function getWebApiRecommendPlaylist() {
-  getRecommendPlaylist().then((data) => {
-    recommendPlaylist.value = data?.result.slice(1)
-  })
 }
 function getSimiExpandFromRecent() {
   getUserRecentListen(profile.value?.userId).then((data) => {
-    const baseSong = randomGet(data?.weekData.slice(0, 20))
+    let baseSong = randomGet(data?.weekData.slice(0, 20))
     const baseSongId = baseSong?.song?.id
     simiRecommendBaseSong.value = baseSong?.song
     let result = []
@@ -202,116 +193,134 @@ function getSimiExpandFromRecent() {
       result.push(...songs?.songs)
       getSimiSong(randomGet(result)?.id).then(songs => {
         result.push(...songs?.songs)
-        simiRecommend.value = uniqueByProp( result.sort(function () {
+        simiRecommend.value = uniqueByProp(result.sort(function () {
           return (0.5 - Math.random());
-        }).filter(i=>i.id !== baseSong?.song?.id),"id")
-        
+        }).filter(i => i.id !== baseSong?.song?.id), "id")
+        result = null
+        baseSong = null
       })
     })
 
   })
 
 }
-function getHomepageStyleRecommend(rf = false) {
-  getHomepageBlock("HOMEPAGE_BLOCK_STYLE_RCMD", 0, rf).then(data => {
-    const block = data?.data?.blocks[0]
-    let styleRcmdSongs = []
-    const creatives = block?.creatives
-    for (let create of creatives) {
-      const res = create?.resources
-      for (const song of res) {
-        styleRcmdSongs.push(song.resourceExtInfo.songData)
-      }
+async function getHomepageStyleRecommend(rf = false) {
+  const data = await getHomepageBlock("HOMEPAGE_BLOCK_STYLE_RCMD", 0, rf)
+  let block = data?.data?.blocks[0]
+  let styleRcmdSongs = []
+  let creatives = block?.creatives
+  for (let create of creatives) {
+    const res = create?.resources
+    for (const song of res) {
+      styleRcmdSongs.push(song.resourceExtInfo.songData)
     }
-    homepageStyleRCMD.value = {
-      ui: block?.uiElement,
-      songs: styleRcmdSongs
-    }
-    console.log(homepageStyleRCMD.value)
-  })
+  }
+  homepageStyleRCMD.value = {
+    ui: block?.uiElement,
+    songs: styleRcmdSongs
+  }
+  styleRcmdSongs = null
+  creatives = null
+  block = null
+
 }
 function getPodCast(rf = false) {
   getHomepageBlock('HOMEPAGE_MUSIC_PODCAST_RCMD_BLOCK', 0, rf).then(data => {
     const res = data?.data.blocks[0].creatives[0].resources
-    console.log(res)
+    void res
   })
 }
-function getRedSimilar(rf = false) {
-  getHomepageBlock('HOMEPAGE_BLOCK_RED_SIMILAR_SONG', 0, rf).then(data => {
-    for (let c of data?.data?.blocks[0]?.creatives) {
-      const r = c?.resources
-      for (let rs of r) {
-        redSimiSongs.value.push(rs.resourceExtInfo.songData)
-      }
+async function getRedSimilar(rf = false) {
+  const data = await getHomepageBlock('HOMEPAGE_BLOCK_RED_SIMILAR_SONG', 0, rf)
+  for (let c of data?.data?.blocks[0]?.creatives) {
+    const r = c?.resources
+    for (let rs of r) {
+      redSimiSongs.value.push(rs.resourceExtInfo.songData)
     }
+  }
+
+}
+
+function getArtistNewUpdate(rf = false) {
+  getUserSubArtistsNewAlbum(10).then(data => {
+    data?.data?.newWorks.map(i => {
+      return {
+        albumId: i.albumId,
+        cover: i.blockTitle?.imgUrl,
+        artistName: i.blockTitle?.artistName,
+        artistId: i?.blockTitle?.artistId,
+        name: i?.blockTitle?.resourceName,
+
+      }
+    })
   })
 }
 
+async function load() {
 
-
-
-
-
-
-
-
-function load() {
-  getDailySong().then((data) => {
-    dailySongs.value = data?.data?.dailySongs
-  })
-  getRecentLike().then((data) => {
-    recentLikes.value = data?.data?.resources
-    console.log(data)
-  })
-  getRadio().then((data) => {
-    officialPlaylist.value = data
-  })
-  getWebApiRecommendPlaylist()
-  watch(
-    isLogin,
-    () => {
-      if (profile.value?.userId && isLogin.value) {
-        getSimiExpandFromRecent()
-      }
+  const tasks = [
+    async () => {
+      getDailySong().then((data) => {
+        dailySongs.value = data?.data?.dailySongs
+      })
     },
-    { immediate: true }
-  )
-  getToplistDetial().then((data) => {
-    artistToplist.value = data?.artistToplist
-    rewardToplist.value = data?.rewardToplist
-    toplist.value = data?.list?.slice(0, 4)
-  })
-  getHomepageStyleRecommend()
-  getPodCast()
-  getRedSimilar()
-  getUserStylePreference().then(data => {
-    const vos = data?.data.tagPreferenceVos
-    const stylePromises = vos.map(style => {
-      return new Promise((resolve) => {
-        const img = new Image();
-        img.src = style?.picUrl;
-        img.crossOrigin = 'anonymous';
-        img.onload = async () => {
-          try {
-            const mainColor = await getMainColorFromImage(img);
-            resolve({ ...style, mainColor });
-          } catch (error) {
-            console.error('Error getting color for image:', style.picUrl, error);
-            resolve({ ...style, mainColor: [0, 0, 0] });
-          }
-        };
-        img.onerror = () => {
-          console.error('Error loading image:', style.picUrl);
-          resolve(style);
-        };
-      });
-    });
+    async () => {
+      getRadio().then((data) => {
+        officialPlaylist.value = data
+      })
+    },
+    getRedSimilar,
+    getWebApiRecommendPlaylist,
+    getHomepageStyleRecommend,
+    async () => {
+      getUserStylePreference().then(data => {
+        const vos = data?.data.tagPreferenceVos
+        const stylePromises = vos.map(style => {
+          return new Promise((resolve) => {
+            const img = new Image();
+            img.src = style?.picUrl;
+            img.crossOrigin = 'anonymous';
+            img.onload = async () => {
+              try {
+                const mainColor = await getMainColorFromImage(img);
+                resolve({ ...style, mainColor });
+              } catch (error) {
+                console.error('Error getting color for image:', style.picUrl, error);
+                resolve({ ...style, mainColor: [0, 0, 0] });
+              }
+            };
+            img.onerror = () => {
+              console.error('Error loading image:', style.picUrl);
+              resolve(style);
+            };
+          });
+        });
 
-    Promise.all(stylePromises).then(stylesWithColors => {
-      console.log(stylesWithColors)
-      userStyle.value = stylesWithColors;
-    });
-  })
+        Promise.all(stylePromises).then(stylesWithColors => {
+          console.log(stylesWithColors)
+          userStyle.value = stylesWithColors;
+        });
+      })
+    },
+  ]
+
+ Promise.resolve().then(paralleTask(tasks, 1))
+
+
+  // getArtistNewUpdate()
+
+  // getRecentLike().then((data) => {
+  //   recentLikes.value = data?.data?.resources
+  // })
+  // getToplistDetial().then((data) => {
+  //   artistToplist.value = data?.artistToplist
+  //   rewardToplist.value = data?.rewardToplist
+  //   toplist.value = data?.list?.slice(0, 4)
+  // })
+
+  // getPodCast()
+
+
 }
 onBeforeMount(() => {
   load()
@@ -321,6 +330,7 @@ onActivated(() => {
   date.value.month = d.getMonth() + 1
   date.value.date = d.getDate().toString().padStart(2, '0')
 })
+
 function randomGet(array) {
   return array[Math.floor(Math.random() * array.length)]
 }
@@ -382,7 +392,7 @@ function playRedSimiSong(id) {
   height: 12rem;
   display: flex;
   flex-direction: row;
-  gap: 30px;
+  gap: 10px;
   margin-top: 3rem;
 }
 
@@ -404,13 +414,21 @@ function playRedSimiSong(id) {
   padding: 1rem;
 }
 
+@keyframes ti-in {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+}
+
 .ti {
   font-weight: 600;
-  font-size: 1.4rem;
+  font-size: 1.7rem;
   display: flex;
   flex-direction: row;
   align-items: center;
   gap: 1rem;
+  animation: ti-in .3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 
   button {
     width: fit-content;
@@ -433,13 +451,14 @@ function playRedSimiSong(id) {
 }
 
 .head .daily-song {
-  width: 25rem;
+  width: 27rem;
   height: 100%;
   display: flex;
   flex-direction: column;
   gap: 0.6rem;
   position: relative;
   background: var(--component);
+  border-radius: var(--br-2);
 
   .title {
     position: absolute;
@@ -477,6 +496,7 @@ function playRedSimiSong(id) {
   display: flex;
   flex-direction: row;
   gap: 1rem;
+
 }
 
 .head .daily-song .cover-preview img {
@@ -504,7 +524,7 @@ function playRedSimiSong(id) {
   z-index: 5;
   color: #fff;
   font-weight: 600;
-  font-size: 1.2rem;
+  font-size: 1.6rem;
   display: flex;
   align-items: center;
 }
@@ -638,6 +658,7 @@ function playRedSimiSong(id) {
 .personalfm {
   flex: 1;
   height: auto;
+  max-width: 30rem;
   background-color: var(--component-diff);
   box-shadow: var(--shadow);
   padding: 1.4rem;
@@ -645,15 +666,16 @@ function playRedSimiSong(id) {
   display: flex;
   flex-direction: row;
   align-items: center;
-  border-radius: var(--br-3);
+  border-radius: var(--br-2);
   position: relative;
   overflow: hidden;
+  color: white;
 
   .cover {
-    width: 12rem;
+    width: 9rem;
     aspect-ratio: 1/1;
     object-fit: cover;
-    border-radius: var(--br-2);
+    border-radius: var(--br-1);
   }
 
   .ep-info {

@@ -1,3 +1,8 @@
+import { computed } from 'vue'
+import { store } from '@/store'
+const config = computed(() => {
+  return store.state.config
+})
 export class AudioManager {
   constructor() {
     this.audio = new Audio()
@@ -5,9 +10,7 @@ export class AudioManager {
     this.events = {}
     this.isinit = false
     this.volumeBeforeMute = 1
-    this.biquadFilterDefaultFrequency = [
-      32, 64, 125, 250, 500, 1000, 2000, 4000, 8000, 16000
-    ]
+    this.biquadFilterDefaultFrequency = [32, 64, 125, 250, 500, 1000, 2000, 4000, 8000, 16000]
     this.biquadFilterDefaultGain = new Array(10).fill(0)
     this.biquadFilterDefaultQuality = 3
     this.audio.addEventListener('play', () => {
@@ -23,21 +26,27 @@ export class AudioManager {
         this.biquadFilterDefaultQuality,
         'peaking'
       )
-      this.frequencyAnalyser = new FrequencyAnalyser(
-        this.audioContext,
-        256
-      )
-      this.source.connect(this.biquadFilterGroup.input)
+      this.frequencyAnalyser = new FrequencyAnalyser(this.audioContext, 256)
+      this.sourceBalanceGain = this.audioContext.createGain()
+      this.outputGain = this.audioContext.createGain()
+      this.outputGain.gain.value = 1
+      this.sourceBalanceGain.gain.value = 0.8
+
+      this.source.connect(this.sourceBalanceGain)
+      this.sourceBalanceGain.connect(this.biquadFilterGroup.input)
       this.biquadFilterGroup.output.connect(this.frequencyAnalyser.input)
-      this.frequencyAnalyser.output.connect(this.audioContext.destination)
+      this.frequencyAnalyser.output.connect(this.outputGain)
+      this.outputGain.connect(this.audioContext.destination)
       this.isinit = true
+
+      this.playAndPauseTimeout = null
     })
   }
   get currentTime() {
     return this.audio.currentTime
   }
   get duration() {
-    return new Promise(resolve => {
+    return new Promise((resolve) => {
       if (this.audio.duration) {
         resolve(this.audio.duration)
       } else {
@@ -53,36 +62,69 @@ export class AudioManager {
   get sampleRate() {
     return this.audioContext?.sampleRate
   }
-  get filter(){
+  get filter() {
     return this.biquadFilterGroup
   }
-  get volume(){
+  get volume() {
     return this.audio.volume
   }
-  get status(){
-    if(this.audio.paused){
+  get status() {
+    if (this.audio.paused) {
       return 'PAUSE'
-    }
-    else{
+    } else {
       return 'PLAY'
     }
   }
   loadFromUrl(src, autoplay) {
-    this.audioContext
     this.audio.src = src
     this.audio.load()
     if (autoplay) {
       this.play()
+      if (config.value.audioFade) {
+        this.outputGain?.gain?.cancelScheduledValues?.(this.audioContext.currentTime)
+        const curve = new Float32Array(2)
+        curve[0] = 0
+        curve[1] = 1
+        this.outputGain?.gain?.setValueCurveAtTime(curve, this.audioContext.currentTime, 1)
+        clearTimeout(this.playAndPauseTimeout)
+        this.playAndPauseTimeout = null
+      }
     }
   }
   play() {
     if (this.audio.paused) {
       this.audio.play()
+      if (config.value?.audioFade) {
+        this.outputGain?.gain?.cancelScheduledValues?.(this.audioContext.currentTime)
+        const curve = new Float32Array(2)
+        curve[0] = this.outputGain?.gain?.value
+        curve[1] = 1
+        this.outputGain?.gain?.setValueCurveAtTime(curve, this.audioContext.currentTime, config.value?.audioFadeDuration / 1000)
+      }
+      clearTimeout(this.playAndPauseTimeout)
+      this.playAndPauseTimeout = null
     }
   }
   pause() {
+    if (this.playAndPauseTimeout) {
+      return
+    }
     if (this.audio.played) {
-      this.audio.pause()
+      if (config.value?.audioFade) {
+        this.outputGain.gain.cancelScheduledValues(this.audioContext.currentTime)
+        const curve = new Float32Array(2)
+        curve[0] = this.outputGain.gain.value
+        curve[1] = 0
+        this.outputGain.gain.setValueCurveAtTime(curve, this.audioContext.currentTime, config.value?.audioFadeDuration / 1000)
+
+        clearTimeout(this.playAndPauseTimeout)
+        this.playAndPauseTimeout = setTimeout(() => {
+          this.audio.pause()
+        }, config.value?.audioFadeDuration)
+      } else {
+        this.playAndPauseTimeout = null
+        this.audio.pause()
+      }
     }
   }
   togglePlayPause() {
@@ -93,23 +135,30 @@ export class AudioManager {
     }
   }
   setVolume(volume) {
-    this.audio.volume = volume
+  if (typeof volume !== 'number' || volume < 0 || volume > 1) {
+    return false;
   }
-  mute(){
-    if(this.audio.volume > 0){
+  this.audio.volume = volume;
+  return true;
+}
+  mute() {
+    if (this.audio.volume > 0) {
       this.volumeBeforeMute = this.audio.volume
       this.audio.volume = 0
     }
   }
-  unmute(){
-    if(this.audio.volume <= 0){
+  unmute() {
+    if (this.audio.volume <= 0) {
       this.audio.volume = this.volumeBeforeMute
       this.volumeBeforeMute = 1
     }
   }
-  toggleMute(){
-    if(this.audio.volume > 0){this.mute()}
-    else{this.unmute()}
+  toggleMute() {
+    if (this.audio.volume > 0) {
+      this.mute()
+    } else {
+      this.unmute()
+    }
   }
   seek(time) {
     this.audio.currentTime = time
@@ -123,15 +172,13 @@ export class AudioManager {
   }
   off(event, callback) {
     if (this.events[event]) {
-      this.events[event] = this.events[event].filter(
-        cb => cb !== callback
-      )
+      this.events[event] = this.events[event].filter((cb) => cb !== callback)
       this.audio.removeEventListener(event, callback)
     }
   }
   trigger(event, data) {
     if (this.events[event]) {
-      this.events[event].forEach(callback => callback(data))
+      this.events[event].forEach((callback) => callback(data))
     }
   }
   destroy() {
@@ -146,11 +193,18 @@ export class AudioManager {
   exposeAudioElement() {
     return this.audio
   }
-  enableFilter(){
+  enableFilter() {
     this.biquadFilterGroup.enable()
   }
-  disableFilter(){
+  disableFilter() {
     this.biquadFilterGroup.disable()
+  }
+  updateSourceBalanceGain(value) {
+    if (!config.value.balanceAudioVolume) {
+      this.sourceBalanceGain.gain.value = 1
+      return
+    }
+    this.sourceBalanceGain.gain.value = value
   }
 }
 export class BiquadFilterGroup {
@@ -162,13 +216,7 @@ export class BiquadFilterGroup {
    * @param {Number} quality
    * @param {string} type
    */
-  constructor(
-    baseAudioContext,
-    frequencies,
-    gains,
-    quality,
-    type = 'peaking'
-  ) {
+  constructor(baseAudioContext, frequencies, gains, quality, type = 'peaking') {
     //bind
     this.update = this._debounce(this.update.bind(this), 100)
     this.biquadFilterGroup = []
@@ -192,7 +240,6 @@ export class BiquadFilterGroup {
     this.biquadFilterGroup[this.len - 1].connect(this.outputGainNode)
     this.input = this.inputGainNode
     this.output = this.outputGainNode
-
   }
   setInputGain(value = 1) {
     this.inputGainNode.gain.value = value
@@ -265,6 +312,7 @@ export class FrequencyAnalyser {
     this.output = this.anyalyser
   }
   getByteFrequencyData() {
+    
     this.anyalyser.getByteFrequencyData(this.dataArray)
     return this.dataArray
   }

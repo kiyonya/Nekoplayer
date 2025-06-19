@@ -1,5 +1,5 @@
 <template>
-    <input type="checkbox" name="" id="" class="switch" :style="{width:width}" @change="onchange($event)" :checked="modelValue">
+    <input type="checkbox" name="" id="" class="switch" :style="`--w:${width}`" @change="onchange($event)" :checked="modelValue">
 </template>
 <script>
 export default {

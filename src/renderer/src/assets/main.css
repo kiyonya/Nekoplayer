@@ -1,22 +1,25 @@
-html{
---side-bar-width:13rem;
---top-bar-height:4rem;
-background-color: var(--root);
+html {
+  --side-bar-width: 13rem;
+  --top-bar-height: 4rem;
+  background-color: var(--root);
 }
-@media  screen and (min-width:1301px) {
-  html{
-    --side-bar-width:15rem;
+
+@media screen and (min-width:1301px) {
+  html {
+    --side-bar-width: 15rem;
   }
 }
+
 body {
   padding: 0;
   margin: 0;
   background: transparent;
   overflow: hidden;
-  
+
 }
-#app{
-  background: var(--app) ;
+
+#app {
+  background: var(--app);
   background-size: cover;
   background-attachment: fixed;
   overflow: hidden;
@@ -24,7 +27,8 @@ body {
   user-select: none;
   font-family: 'misans';
 }
-.app-view{
+
+.app-view {
   height: calc(100vh - var(--top-bar-height));
   width: calc(100% - var(--side-bar-width));
   display: flex;
@@ -43,7 +47,7 @@ body {
 
 
 *::-webkit-scrollbar {
-  width: 7px;
+  width: 8px;
   appearance: none;
   background: var(--scrollbar-background)
 }
@@ -58,16 +62,19 @@ button:active {
   transform: scale(0.9);
   transition: .5s;
 }
+
 * {
   margin: 0;
   padding: 0;
 }
+
 .page {
   display: flex;
   flex-direction: column;
   align-items: center;
   margin-top: 0;
 }
+
 .page * {
   flex-shrink: 0;
 }
@@ -150,12 +157,13 @@ button:active {
   opacity: 1 !important;
 }
 
-@media screen and (max-width : 1500px){
-  .g-shell-6{
-    grid-template-columns: repeat(5,1fr) !important;
+@media screen and (max-width : 1500px) {
+  .g-shell-6 {
+    grid-template-columns: repeat(5, 1fr) !important;
   }
-  .g-shell-5{
-    grid-template-columns: repeat(4,1fr) !important;
+
+  .g-shell-5 {
+    grid-template-columns: repeat(4, 1fr) !important;
   }
 }
 
@@ -283,6 +291,7 @@ button:active {
   align-items: end;
   opacity: var(--text-opacity-1);
 }
+
 .g-ti .more {
   font-size: 0.9rem;
   font-weight: 500;
@@ -293,8 +302,8 @@ button:active {
 }
 
 
-.el-switch{
-  --w:2.8rem;
+.el-switch {
+  --w: 2.8rem;
   width: var(--w);
   height: calc(var(--w) / 2);
   background: var(--ui);
@@ -307,26 +316,30 @@ button:active {
   justify-content: center;
   transition: all .2s ease-in-out;
 }
-.el-switch::before{
+
+.el-switch::before {
   height: 90%;
   aspect-ratio: 1/1;
   content: "";
   position: absolute;
   border-radius: 50%;
-  left: calc(var(--w) / 2 * 0.05) ;
-  top: calc(var(--w) / 2 * 0.05) ;
+  left: calc(var(--w) / 2 * 0.05);
+  top: calc(var(--w) / 2 * 0.05);
   background-color: #ffffff;
-  
+
 }
-.el-switch:checked{
+
+.el-switch:checked {
   background: var(--strong);
 }
-.el-switch:checked::before{
+
+.el-switch:checked::before {
   left: auto;
-  right: calc(var(--w) / 2 * 0.05) ;
+  right: calc(var(--w) / 2 * 0.05);
 }
-.el-btn{
-  width:fit-content;
+
+.el-btn {
+  width: fit-content;
   height: fit-content;
   padding: 0.2rem 0.8rem;
   border: none;
@@ -335,12 +348,14 @@ button:active {
   font-weight: 600;
   background: none;
   border-radius: 0.2rem;
-  transition:  all .1s ease-in-out;
+  transition: all .1s ease-in-out;
 }
-.el-btn:hover{
+
+.el-btn:hover {
   background: var(--hover);
 }
-.el-select{
+
+.el-select {
   min-width: 10rem;
   width: fit-content;
   max-width: 40rem;
@@ -356,13 +371,16 @@ button:active {
   -moz-appearance: none;
   appearance: none;
 }
-.el-select:hover{
+
+.el-select:hover {
   background: var(--hover);
 }
-.el-select option{
+
+.el-select option {
   font-size: 1rem;
 }
-.el-input{
+
+.el-input {
   background: var(--app-theme-component);
   font-size: 1rem;
   outline: none;
@@ -373,7 +391,7 @@ button:active {
   font-weight: bold;
 }
 
-.ump-btn{
+.ump-btn {
   border: none;
   background-color: transparent;
   display: flex;
@@ -383,7 +401,8 @@ button:active {
   padding: 0.3rem;
   color: var(--text);
 }
-.native-o-button{
+
+.native-o-button {
   border: none;
   background-color: transparent;
   display: flex;
@@ -393,6 +412,8 @@ button:active {
   padding: 0.3rem;
   color: inherit;
 }
-.native-o-button:hover{
+
+.native-o-button:hover {
   background: var(--hover);
 }
+

@@ -65,7 +65,7 @@ export async function verifyCaptcha(phone, captcha) {
 }
 
 export async function refreshLogin() {
-  const data = await request({
+  return request({
     url: `/login/refresh`
   })
 }
@@ -110,4 +110,15 @@ export async function login(cookie) {
     store.commit('updateProfile',userProfile)
     return userProfile.userId
   }
+}
+
+export async function cellphoneLogin({phone,password = null,captcha =null}) {
+  if(!password && !captcha){return}
+  return request({
+    url:"/login/cellphone",
+    method:'post',
+    body:{
+      phone,password,captcha
+    }
+  })
 }

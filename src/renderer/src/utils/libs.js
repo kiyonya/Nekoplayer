@@ -36,6 +36,7 @@ let ob = new IntersectionObserver((entries) => {
     entries.forEach((item) => {
       if (item.isIntersecting) {
         item.target.src = item.target.dataset.src;
+        item.target.style.opacity = 1
         ob.unobserve(item.target);
       }
     });

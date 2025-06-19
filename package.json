@@ -23,6 +23,7 @@
     "dexie": "^4.0.11",
     "electron-as-wallpaper": "^2.0.3",
     "electron-updater": "^6.1.7",
+    "get-folder-size": "^5.0.0",
     "jsdom": "^26.1.0",
     "jsmediatags": "^3.9.7",
     "NeteaseCloudMusicApi": "^4.25.0"

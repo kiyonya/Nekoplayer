@@ -71,7 +71,7 @@ export default {
   width: 100%;
   aspect-ratio: 1/1;
   position: absolute;
-  border-radius: 5%;
+  border-radius: var(--br-1);
 }
 .cover-shell .blur {
   width: 95% !important;

@@ -1,5 +1,5 @@
 <template>
-  <div class="music-player" >
+  <div class="music-player">
     <div class="top-control">
       <button @click.stop="store.commit('showPlayer', false)">
         <Icon icon="mingcute:down-line" class="icon2" />
@@ -12,6 +12,7 @@
         <img :src="resize(musicInfo.cover, 500)" alt="" class="color-background" />
         <canvas ref="dynamic" width="500" height="500" class="dynamic-cvs"></canvas>
       </div>
+      <div class="mcp-background" v-if="backgroundMode === 'color'" ref="colorBackground"></div>
     </div>
 
     <div class="left">
@@ -32,13 +33,33 @@
         </div>
       </div>
 
-      <div class="cover">
+
+      <div class="cover" :class="{ 'cover-scale': coverTransition }" v-if="playerCoverDisplayType === 'cover'">
         <img :src="resize(musicInfo.cover, 800)" alt="" class="main-cover" crossorigin="anonymous"
           v-if="!enableDynamicCover" />
-        <img :src="resize(musicInfo.cover, 400)" alt="" class="blur-cover" crossorigin="anonymous" ref="mainCover" />
+        <img :src="resize(musicInfo.cover, 400)" alt="" class="blur-cover" crossorigin="anonymous" />
         <video :src="dynamicCover.videoPlayUrl" loop muted autoplay class="dynamic-cover"
           v-if="enableDynamicCover"></video>
       </div>
+
+
+
+      <div class="dynamic-vinly" v-if="playerCoverDisplayType === 'record' || playerCoverDisplayType === 'wave'">
+        <canvas class="dynamic-wave-cvs" ref="dynamicWave"></canvas>
+        <div class="cd" :key="musicInfo.id" :class="{ 'cd-in': playerCoverDisplayType === 'record' }">
+          <div class="vinyl spin"
+            :style="{ animationPlayState: audioState.state === 'pause' ? 'paused' : 'running', width: playerCoverDisplayType === 'record' ? '85%' : '70%' }">
+            <img :src="musicInfo?.cover" alt="">
+          </div>
+        </div>
+      </div>
+
+
+
+
+
+
+
 
       <div class="functions">
         <button>
@@ -124,7 +145,8 @@
       <div class="lyric" ref="lyricContainer" :style="musicPlayerLyricGrow ? '--glow: #ffffff77;' : ''"
         v-show="rightDisplayType === 'lyric'">
         <span style="margin-top: 50%;"></span>
-        <div class="lyric-cell" v-for="lrc in lyric" :class="{ blur: musicPlayerLyricBlur }" @click="jumpLyricTime(lrc)">
+        <div class="lyric-cell" v-for="lrc in lyric" :class="{ blur: musicPlayerLyricBlur }"
+          @click="jumpLyricTime(lrc)">
           <div class="normal" v-if="!lrc?.gap && !lrc.subLyric">
             <p v-if="lrc?.text" class="lrc">{{ lrc?.text }}</p>
             <p v-if="lrc.tlyric" class="tns">{{ lrc?.tlyric }}</p>
@@ -144,23 +166,28 @@
       </div>
 
       <div class="lyric-setting">
-        <span v-if="temp.lyricStatus.value.localcache">本地缓存</span>
+        <span v-if="musicInfo.local">本地缓存</span>
       </div>
     </div>
 
+    <div class="toolkit" :class="{ 'showtookit': showTookKit }">
+      <div class="center" @click="showTookKit = !showTookKit">
+        <Icon icon="material-symbols-light:circle" class="i" />
+      </div>
+    </div>
     <!--交融滤镜-->
     <svg style="display: none">
-      <defs>
-        <filter id="mix">
-          <feGaussianBlur in="SourceGraphic" stdDeviation="50" result="blur"></feGaussianBlur>
-          <feColorMatrix in="blur" mode="matrix" values="
-                1 0 0 0 0
-                0 1 0 0 0
-                0 0 1 0 0
-                0 0 0 20 -10"></feColorMatrix>
-        </filter>
-      </defs>
-    </svg>
+  <defs>
+    <filter id="mix-sharp">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="30" result="blur"></feGaussianBlur>
+      <feColorMatrix in="blur" mode="matrix" values="
+            1.5 0   0   0   0
+            0   1.5 0   0   0
+            0   0   1.5 0   0
+            0   0   0   25  -12"></feColorMatrix>
+    </filter>
+  </defs>
+</svg>
 
     <!--右键菜单-->
     <ContextMenu :menu="[
@@ -172,6 +199,7 @@
       { label: '喜欢', act: 'like', icon: 'ri:hearts-fill' },
       { label: '收藏', act: 'collect', icon: 'fluent:collections-20-filled' },
       { label: '分享', act: 'share', icon: 'majesticons:share' },
+      { label: '详情', act: 'detail', icon: 'majesticons:share' },
       { label: '浏览器打开', act: 'browser', icon: 'mdi:web' },
     ]" @select="(e) => handleContextMenu(e)">
     </ContextMenu>
@@ -186,7 +214,7 @@
       <span v-if="!musicInfo.local">id：{{ musicInfo.id }}</span>
       <span v-if="musicInfo.local && !musicInfo.ncmmatch">专辑：{{ musicInfo.album || '未知' }}</span>
       <span>歌手：<ArtistNameGroup :array="musicInfo.artist"></ArtistNameGroup></span>
-      <span>时长：{{ s2mmss(audioStatus.duration) }}</span>
+      <span>时长：{{ s2mmss(audioState.duration) }}</span>
       <span v-if="musicInfo.local">地址：{{ musicInfo.id }}</span>
       <span v-if="musicInfo.local">类型：本地<span v-if="musicInfo.ncmmatch">(已匹配网易云)</span></span>
       <span v-if="musicInfo.local">比特率：{{ musicInfo.format.bitrate / 1000 }}kbps</span>
@@ -223,14 +251,21 @@ import { lyricArea, lyricIndex } from '@/musicplayer/lyric'
 import ModalWindow from '../windows/ModalWindow.vue'
 import { player } from '@/main'
 import { computedHighlight } from '@/api/lyric'
-import { getColor } from '@/musicplayer/color'
-import { DynamicBackground } from './main'
+import { getColor } from '@/components/musicplayer/color'
+import { AudioWaveDrawer, DynamicBackground } from './main'
+import { AudioWaveEffect } from "./audio_wave"
 import { LyricScroller } from './lyric_scroller'
 import { onUnmounted } from 'vue'
+import { main } from '@/plugins/qqimport'
+import { getMainColorFromImage } from '@/utils/color'
+import { nextTick } from 'vue'
 const showModalWindow = ref(false)
 const showListentogetherInvite = ref(false)
 const rightDisplayType = ref('lyric')
 const audio = temp.audio
+const playerCoverDisplayType = computed(() => {
+  return store.state.config.playerCoverDisplayType
+})
 const progress = computed({
   get: () => { return store.state.audioState.ct / store.state.audioState.dt || 0 },
   set: (val) => {
@@ -272,7 +307,7 @@ const dynamicCover = computed(() => {
   return store.state.nowPlayingDynamicCover
 })
 const enableDynamicCover = computed(() => {
-  if (store.state.config.enableDynamicCover && dynamicCover.value.videoPlayUrl) {
+  if (store.state.config.enableDynamicCover && dynamicCover.value?.videoPlayUrl) {
     return true
   }
   else {
@@ -289,59 +324,124 @@ const isListentogether = computed(() => {
   return store.state.inListentogetherRoom
 })
 const lyricContainer = ref(null)
-const mainCover = ref(null)
 const dynamic = ref(null)
-const colorGroup = ref({ mainColor: [0, 0, 0] })
-let onDraw = false
+const vinyl = ref(null)
+const dynamicWave = ref(null)
+const coverTransition = ref(false)
+const showTookKit = ref(false)
+const playerKey = ref(Date.now())
+const colorBackground = ref(null)
+const mainCover = document.createElement('img')
+mainCover.crossOrigin = "Anonymous"
 
-
-
-onMounted(() => {
-
-  const lyricScroller = new LyricScroller(lyricContainer.value, {
-    highlightClassName: 'highlight'
-  })
-  const dynamicBackground = new DynamicBackground(dynamic.value, mainCover.value)
-  onDraw = true
-
-  const scrollLyric = function (e) {
-    const time = player.audioManager.currentTime
-    const {index,highlightSentence} = computedHighlight(lyric.value,time)
-    if(highlightSentence.gap){
-      lyricScroller.countGap({
-        index:index + 1,
-        time,
-        delay:highlightSentence?.delay,
-        next:highlightSentence?.next
+// 动画帧ID存储
+let animationFrameIds = {
+  waveDraw: null,
+  mainProcess: null
+}
+let cacheClearTimer = setInterval(() => {
+  window.webFrame.clearCache()
+}, 2000);
+const cleanupFunctions = []
+onMounted(async () => {
+  await nextTick()
+  try {
+    const mainProcess = () => {
+      const lyricScroller = new LyricScroller(lyricContainer.value, {
+        highlightClassName: 'highlight'
       })
+      let dynamicBackground = null
+      if (backgroundMode.value === "dynamic") {
+        dynamicBackground = new DynamicBackground(dynamic.value)
+        console.log("rendered")
+      }
+      let dynamicWaveDrawer = null
+      if (playerCoverDisplayType.value === 'wave') {
+        dynamicWaveDrawer = new AudioWaveEffect(dynamicWave.value)
+      }
+      const handleCoverLoad = async () => {
+        console.log("coverload")
+        getColor(mainCover).then(color => {
+          dynamicWaveDrawer?.setFillColor(color.matchColor)
+          if (dynamicWave?.value && playerCoverDisplayType.value === 'wave') {
+            dynamicWave?.value?.setAttribute("style", `--main:rgba(${color.mainColor},1)`)
+          }
+          if (backgroundMode.value === 'color' && colorBackground.value) {
+            colorBackground.value.setAttribute("style", `--main:rgb(${color.mainColor})`)
+          }
+          if (backgroundMode.value === "dynamic" && dynamicBackground) {
+            dynamicBackground.setColors(color.mainColor)
+          }
+        })
+      }
+      const scrollLyric = () => {
+        const time = player.audioManager.currentTime
+        const { index, highlightSentence } = computedHighlight(lyric.value, time)
+        if (highlightSentence.gap) {
+          lyricScroller.countGap({
+            index: index + 1,
+            time,
+            delay: highlightSentence?.delay,
+            next: highlightSentence?.next
+          })
+        }
+        lyricScroller.scroll(index + 1)
+      }
+      const dynamicWaveDraw = () => {
+        if (playerCoverDisplayType.value !== 'wave') return
+        animationFrameIds.waveDraw = requestAnimationFrame(() => {
+          dynamicWaveDraw()
+          if (audioState.value.state === "pause") return
+          dynamicWaveDrawer.draw(player.audioManager.frequencyAnalyser.getByteFrequencyData())
+        })
+      }
+      mainCover.addEventListener('load', handleCoverLoad)
+      player.audioManager.on('timeupdate', scrollLyric)
+      cleanupFunctions.push(
+        () => mainCover.removeEventListener('load', handleCoverLoad),
+        () => player.audioManager.off('timeupdate', scrollLyric),
+        () => {
+          if (animationFrameIds.waveDraw) {
+            cancelAnimationFrame(animationFrameIds.waveDraw)
+          }
+        },
+        () => lyricScroller?.destroy(),
+        () => dynamicBackground?.unmount(),
+        () => {
+          if (animationFrameIds.mainProcess) {
+            cancelAnimationFrame(animationFrameIds.mainProcess)
+          }
+        }
+      )
+      scrollLyric()
+      dynamicBackground?.start()
+      dynamicWaveDraw()
+      const musicInfoWatcher = watch(musicInfo, () => {
+        mainCover.src = musicInfo.value.cover?.startsWith("https") ? musicInfo.value.cover + "?param=20y20" : musicInfo.value.cover
+        console.log(mainCover.src)
+        lyricScroller.reset()
+        coverTransition.value = true
+        setTimeout(() => {
+          coverTransition.value = false
+        }, 200)
+
+      }, { immediate: true })
+      cleanupFunctions.push(musicInfoWatcher)
     }
-    lyricScroller.scroll(index + 1 )
+    Promise.resolve().then(mainProcess())
+  } catch (error) {
+    console.error('组件初始化失败:', error)
   }
-  player.audioManager.on('timeupdate', scrollLyric)
-  mainCover.value.addEventListener('load', renderColor)
-
-
-  onUnmounted(() => {
-    onDraw = false
-    player.audioManager.off('timeupdate', scrollLyric)
-    lyricScroller.destroy()
-  })
-  watch(musicInfo, () => {
-    lyricScroller.reset()
-    console.log(lyric.value)
-  })
-
-  function renderColor() {
-    getColor(mainCover.value).then(color => {
-      colorGroup.value = color
-    })
-  }
-
-  scrollLyric()
-  dynamicBackground.start()
-
-  // frequencyVisualize()
 })
+
+onUnmounted(() => {
+  // 执行所有清理函数
+  cleanupFunctions.forEach(cleanup => cleanup?.())
+  cleanupFunctions.length = 0 // 清空数组
+  window.webFrame.clearCache()
+  clearInterval(cacheClearTimer)
+})
+
 
 
 function handleContextMenu(e) {
@@ -387,19 +487,19 @@ function copyInviteLink() {
   window.navigator.clipboard.writeText(link)
 }
 
-function jumpLyricTime(lyric){
+function jumpLyricTime(lyric) {
   player.seek(lyric.timestamp)
 }
 </script>
 <style scoped>
 @media screen and (min-width: 1600px) {
   .left {
-    width: 28rem !important;
-    gap: 1.3rem !important;
+    width: 30rem !important;
+    gap: 1.5rem !important;
   }
 
   .music-player {
-    --edge-gap: 11% !important;
+    --edge-gap: 13% !important;
   }
 
 }
@@ -444,9 +544,7 @@ function jumpLyricTime(lyric){
   top: 0;
   z-index: -1;
   overflow: hidden;
-
   background: #1d1d1d;
-  animation: background-fade .6s;
 }
 
 .background .image-background {
@@ -458,12 +556,7 @@ function jumpLyricTime(lyric){
   transform: scale(1.1);
 }
 
-@keyframes left-enter {
-  from {
-    transform: translateX(70px);
-    opacity: 0;
-  }
-}
+
 
 .left {
   width: 24rem;
@@ -521,6 +614,7 @@ function jumpLyricTime(lyric){
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  transition: .2s;
 }
 
 .left .cover img {
@@ -777,6 +871,7 @@ function jumpLyricTime(lyric){
     padding: 1.1rem 0;
     transition: .3s cubic-bezier(0.075, 0.82, 0.165, 1);
     transform: translateY(-20px);
+    text-align: right;
   }
 
   .sub .lrc {
@@ -786,19 +881,23 @@ function jumpLyricTime(lyric){
     display: block;
     opacity: 0.3;
     font-weight: 600;
-    font-size: 15px;
+    font-size: 25px;
+
   }
 }
-.right .lyric .lyric-cell:hover *{
+
+.right .lyric .lyric-cell:hover * {
   opacity: 1 !important;
 }
-.right .lyric .lyric-cell:hover{
+
+.right .lyric .lyric-cell:hover {
   filter: none !important;
   /* padding-left: 0.9rem;
   border-left: 4px solid rgba(255, 255, 255, 0.488);
   box-sizing: border-box; */
   transition: .3s;
 }
+
 .blur {
   filter: blur(2px);
 }
@@ -814,7 +913,7 @@ function jumpLyricTime(lyric){
 
   .lrc {
     overflow: visible;
-    font-size:36px !important;
+    font-size: 36px !important;
     opacity: 1 !important;
   }
 
@@ -902,6 +1001,17 @@ function jumpLyricTime(lyric){
   border: 1px solid #ffffffa6;
 }
 
+@keyframes dynamic-enter {
+  from {
+
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
 .dynamic-background {
   width: 100%;
   height: 100%;
@@ -910,11 +1020,12 @@ function jumpLyricTime(lyric){
   top: 0;
   z-index: 5;
   transform: scale(1.1);
+  animation: dynamic-enter 1s;
 }
 
 .dynamic-background .color-background {
   width: 100%;
-  height: 100%;
+  height: inherit;
   object-fit: cover;
   position: absolute;
   opacity: 0.5;
@@ -922,10 +1033,20 @@ function jumpLyricTime(lyric){
   z-index: -1;
 }
 
+.mcp-background {
+  width: 100%;
+  height: inherit;
+  object-fit: cover;
+  position: absolute;
+  opacity: 0.5;
+  z-index: -1;
+  background: var(--main, transparent);
+}
+
 .dynamic-cvs {
   width: 100%;
   height: 100%;
-  filter: url(#mix) blur(500px) saturate(2.1) brightness(0.7) contrast(1.5);
+  filter: saturate(2) brightness(0.6) contrast(1.2) url(#mix) blur(80px);
   position: absolute;
   transform: scale(1.5);
   z-index: 2;
@@ -993,5 +1114,128 @@ button:hover {
   width: fit-content;
   height: fit-content;
   padding: 0.4rem;
+}
+
+.cover-scale {
+  transform: scale(1.1);
+}
+
+
+@keyframes cd-in {
+  from {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.cd-in {
+  animation: cd-in 1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.spin {
+  animation: spin 25s linear infinite;
+}
+
+.dynamic-vinly {
+  width: 100%;
+  aspect-ratio: 1/1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.dynamic-wave-cvs {
+  width: 100%;
+  aspect-ratio: 1/1;
+  position: absolute;
+  filter: brightness(1.1) saturate(1.5) contrast(1.5) drop-shadow(0 0 20px rgba(255, 255, 255, 0.229))
+    /* 
+        drop-shadow(0 0 20px color-mix(in srgb,var(--main) 50%,white)) */
+}
+
+.cd {
+  width: 100%;
+  aspect-ratio: 1/1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+
+  opacity: 1;
+
+
+
+  .vinyl {
+    width: 70%;
+    aspect-ratio: 1/1;
+    background: radial-gradient(circle at center,
+        transparent 0%,
+        transparent 65%,
+        rgba(255, 255, 255, 0.05) 65.5%,
+        transparent 66%,
+        transparent 100%),
+      repeating-radial-gradient(circle at center,
+        #111 0%,
+        #111 1px,
+        #222 1px,
+        #222 2px);
+    background-size: 100% 100%, 100% 100%;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
+
+
+
+    img {
+      width: 60%;
+      aspect-ratio: 1/1;
+      border-radius: 50%;
+      outline: 1px solid rgba(255, 255, 255, 0.5);
+      object-fit: cover;
+    }
+  }
+
+}
+
+.toolkit {
+  height: 3rem;
+  width: 3rem;
+  position: absolute;
+  right: 2rem;
+  background: transparent;
+  backdrop-filter: blur(5px);
+  border-radius: 3rem;
+  transition: .5s;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+
+  .center {
+    font-size: 2rem;
+  }
+}
+
+.showtookit {
+  height: 50% !important;
+  border-radius: 3rem;
+
+  background-color: #ffffff44;
 }
 </style>

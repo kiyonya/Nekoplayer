@@ -51,3 +51,55 @@ export async function getMainColorFromImage(img) {
     const color = await colorThief.getColor(img)
     return color
 }
+
+/**
+ * 生成指定数量的相似颜色
+ * @param {Array} baseColor - 基础RGB颜色，如[255, 120, 50]
+ * @param {number} count - 要生成的颜色数量
+ * @param {number} diff - 相似度差异值(0-100)，值越小颜色越接近
+ * @returns {Array} 返回生成的RGB颜色数组
+ */
+export function generateSimilarColors(baseColor, count, diff) {
+  // 参数验证
+  if (!Array.isArray(baseColor) || baseColor.length !== 3 || 
+      baseColor.some(c => c < 0 || c > 255)) {
+    throw new Error('baseColor必须是有效的RGB数组，如[255, 120, 50]');
+  }
+  if (typeof count !== 'number' || count < 1) {
+    throw new Error('count必须是大于0的数字');
+  }
+  if (typeof diff !== 'number' || diff < 0 || diff > 100) {
+    throw new Error('diff必须是0到100之间的数字');
+  }
+
+  // 将diff从百分比转换为实际RGB值范围(0-255)
+  const maxDiff = Math.round((diff / 100) * 255);
+  const colors = [];
+
+  for (let i = 0; i < count; i++) {
+    // 为每个通道生成随机偏移量
+    const r = baseColor[0] + getRandomOffset(maxDiff);
+    const g = baseColor[1] + getRandomOffset(maxDiff);
+    const b = baseColor[2] + getRandomOffset(maxDiff);
+
+    // 确保RGB值在0-255范围内
+    colors.push([
+      clampValue(r, 0, 255),
+      clampValue(g, 0, 255),
+      clampValue(b, 0, 255)
+    ]);
+  }
+
+  return colors;
+}
+
+// 生成-到+maxDiff之间的随机偏移量
+function getRandomOffset(maxDiff) {
+  return Math.floor(Math.random() * (maxDiff * 2 + 1)) - maxDiff;
+}
+
+// 确保值在min-max范围内
+function clampValue(value, min, max) {
+  return Math.min(Math.max(value, min), max);
+}
+

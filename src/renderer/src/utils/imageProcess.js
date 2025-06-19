@@ -5,7 +5,7 @@ const defaultImg =
 
 export function resize(url, pixel) {
   if (!url) {
-    return defaultImg
+    return null
   }
   if (url.startsWith('blob:')) {
     return url

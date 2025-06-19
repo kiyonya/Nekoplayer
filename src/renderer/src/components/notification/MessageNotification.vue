@@ -38,6 +38,5 @@
    color: var(--text);
    border-radius: var(--br-3);
    text-align: center;
-   animation: msgin .5s cubic-bezier(0.39, 0.575, 0.565, 1);
 }
 </style>

@@ -1,5 +1,5 @@
 appId: com.electron.app
-productName: nekoplayer_app
+productName: 喵喵播放器
 directories:
   buildResources: build
 files:

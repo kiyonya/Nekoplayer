@@ -1,8 +1,8 @@
 <template>
   <div class="page">
     <div class="head area">
-      <div class="avatar-shell">
-        <img :src="resize(artistDetial?.artist?.avatar, 500)" alt="" class="main-avatar" />
+      <div class="avatar-shell" style="opacity: 0;">
+        <img :src="resize(artistDetial?.artist?.avatar, 500)" alt="" class="main-avatar" @load="($event)=>{$event.target.parentElement.style.opacity = '1'}"/>
         <img :src="resize(artistDetial?.artist?.avatar, 500)" alt="" class="blur-avatar" />
       </div>
       <div class="artist-detial">
@@ -12,7 +12,7 @@
           <span>{{ artistDetial?.artist?.albumSize }}专辑</span>
           <span>{{ artistDetial?.artist?.mvSize }}音乐视频</span>
         </span>
-        <p class="desc">{{ artistDetial?.artist?.briefDesc }}</p>
+        <p class="desc" @click="showDesc = true">{{ artistDetial?.artist?.briefDesc }}</p>
       </div>
     </div>
     <div class="songs area">
@@ -55,12 +55,21 @@
           :duration="mv?.duration" :id="mv?.id"></MvCard>
       </div>
     </div>
+    <ModalWindow v-if="showDesc" @close="showDesc = false" :title="artistDetial?.artist?.name">
+      <div class="introduction">
+        <p class="bref">{{ artistDetial?.artist?.briefDesc }}</p>
+        <div class="intro" v-for="intro in fullDesc">
+          <h2>{{ intro.ti }}</h2>
+          <p v-html="intro.txt?.replaceAll('。','。<br>').replaceAll('\n','<br>')"></p>
+        </div>
+
+      </div>
+    </ModalWindow>
   </div>
 </template>
 <script setup>
-import { getArtistDetial, getMvs, getArtistAlbums } from '@/api/artist'
+import { getArtistDetial, getMvs, getArtistAlbums, getDesc } from '@/api/artist'
 import { resize } from '@/utils/imageProcess'
-import { getDate } from '@/utils/timers'
 import { ref } from 'vue'
 import { onBeforeMount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -69,6 +78,7 @@ import { getSongDetial } from '@/api/song'
 import Song_Small from '@/components/Song_Small.vue'
 import AlbumCard from '@/components/AlbumCard.vue'
 import MvCard from '@/components/MvCard.vue'
+import ModalWindow from '@/components/windows/ModalWindow.vue'
 import { computed } from 'vue'
 import { store } from '@/store'
 import { player } from '@/main'
@@ -81,6 +91,8 @@ const hotSongs = ref([])
 const dss = computed(() => {
   return store.state.deviceScreenSize
 })
+const showDesc = ref(false)
+const fullDesc = ref([])
 function load(id) {
   getArtistDetial(id).then((data) => {
     console.log(data?.data)
@@ -101,13 +113,17 @@ function load(id) {
   getMvs(id, 1, 20).then((data) => {
     mvs.value = data?.mvs
   })
+
+  getDesc(id).then(desc=>{
+    fullDesc.value = desc.introduction || []
+  })
 }
 onBeforeMount(() => {
   let id = useRoute().params.id
 
   if (id) {
     artistId.value = id
-    load(id)
+    Promise.resolve().then(load(id))
   }
 })
 
@@ -160,6 +176,8 @@ function playHotSongs(id) {
   position: relative;
   display: flex;
   justify-content: center;
+  transition: .2s;
+  will-change: opacity;
 
   img {
     width: 100%;
@@ -219,6 +237,9 @@ function playHotSongs(id) {
     overflow: hidden;
     overflow: hidden;
     -webkit-box-orient: vertical;
+  }
+  .desc:hover{
+    text-decoration: underline;
   }
 }
 
@@ -304,5 +325,34 @@ function playHotSongs(id) {
 
 .linkout:hover {
   background: var(--hover);
+}
+
+.introduction{
+  width: 37rem;
+  max-height: 40rem;
+  overflow-y: auto;
+  color: var(--text-o-1);
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  line-height: 1.5em;
+
+
+  .intro{
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+
+    h2{
+      width: 100%;
+      border-bottom: 1.5px solid var(--border);
+      padding-bottom: 0.8rem;
+    }
+
+    p{
+      color: var(--text-o-2);
+    }
+  }
+
 }
 </style>

@@ -13,7 +13,6 @@ export async function ncmDownload(id,quality = 'standard'){
     const song = (await getSongDetial(id))?.data?.songs[0];
     const track = await getSongUrl(id,quality);
     const url = track.url;
-    console.log(track,downloadPath)
     const namingMethod = downloadNamingMethod.value;
     const savePath = downloadPath.value;
     let name;

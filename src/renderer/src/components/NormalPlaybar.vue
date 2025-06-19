@@ -18,7 +18,9 @@
       </div>
     </div>
     <div class="playbar-m">
+     
       <div class="widget-shell">
+
         <button>
           <Icon icon="proicons:heart" class="icon1" />
         </button>
@@ -87,6 +89,7 @@ import { player } from '@/main'
 import { ref } from 'vue'
 import ListentogetherControl from './ListentogetherCreate.vue'
 import { getMainColorFromImage } from '@/utils/color'
+import { mmss } from '@/utils/timers'
 const showListentogetherControl = ref(false)
 const bgColor = ref([])
 const audioState = computed(()=>{

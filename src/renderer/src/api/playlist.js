@@ -3,21 +3,10 @@ import request from '../utils/request'
 import { getSongDetial } from './song'
 import { sessionCache, sessionGet } from '@/lib/cache/session_cache'
 const cookie = localStorage.getItem('neko_user_cookie') || undefined
-export async function getPlaylistDetial(pid,cache=true) {
-  const namespace = `playlist_detial_${pid}`
-  if(cache){
-    let cachePlaylistDetial = sessionGet(namespace)
-    if(cachePlaylistDetial){return cachePlaylistDetial}
-  }
-  const data = await request({
+export function getPlaylistDetial(pid) {
+  return request({
     url: `/playlist/detail?id=${pid}`,
-    method: 'post',
-    body: {
-      cookie: cookie
-    }
   })
-  cache && sessionCache(namespace,data)
-  return data
 }
 
 export async function getPlaylistMusic(pid, count, page) {
@@ -51,12 +40,14 @@ export async function getPlaylistSongs(id, limit, offset) {
   return data
 }
 
-export async function getPlaylistTracks(id,ids = null,cache=true) {
+export async function getPlaylistTracks(id,ids = null,cache=false) {
   const namespace = `playlist_tracks_${id}`
   try {
     if(cache){
+      console.log("缓存的")
       let cachePlaylistTracks = sessionGet(namespace)
       if(cachePlaylistTracks){return cachePlaylistTracks}
+      cachePlaylistTracks = null
     }
     const trackIds = ids || (await getPlaylistDetial(id))?.playlist?.trackIds;
     const dvChunks = chunkArray(trackIds, 100);

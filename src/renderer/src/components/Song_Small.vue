@@ -67,20 +67,27 @@ export default {
 }
 </script>
 <style scoped>
+@keyframes song-in {
+  from{
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
 .re-song {
   width: 100%;
   height: 100%;
   position: relative;
-  border-radius: 5px;
+  border-radius: var(--br-1);
   list-style: none;
   display: flex;
   flex-direction: row;
   align-items: center;
   cursor: pointer;
   scroll-snap-align: start;
+  animation:  song-in .6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 .onplay{
-  outline: 5px solid var(--strong-light) !important;
+  outline: 5px solid var(--strong) !important;
 }
 .re-song:hover {
   box-shadow: 1px 1px 10px #00000013;
@@ -93,7 +100,7 @@ export default {
   aspect-ratio: 1/1;
   object-fit: cover;
   margin-right: 0.5rem;
-  border-radius: 5px;
+  border-radius: var(--br-1);
 }
 
 .re-song .song-info {
@@ -104,7 +111,7 @@ export default {
 .re-song .song-name {
   font-size: 1.05rem;
   font-weight: 600;
-  opacity: var(--text-opacity-1);
+  opacity: var(--text-o-2);
   width: 11.25rem;
   white-space: nowrap;
   overflow: hidden;
@@ -117,7 +124,7 @@ export default {
   overflow: hidden;
   text-overflow: ellipsis;
   font-size: 0.9rem;
-  opacity: var(--text-opacity-2);
+  opacity: var(--text-o-3);
   letter-spacing: -0.03rem;
 }
 

@@ -42,11 +42,9 @@
       {label:'喜欢',act:'like',icon:'ri:hearts-fill'},
       {label:'收藏',act:'collect',icon:'fluent:collections-20-filled'},
       {label:'复制链接',act:'copylink',icon:'tabler:link'},
-      {label:'复制ID',act:'copyid',icon:'tabler:number'},
     'hr',
       {label:'下载歌词',act:'downloadlyric',icon:'material-symbols:download'},
       {label:'下载nlo歌词',act:'downloadNloLyric',icon:'material-symbols:download'},
-      {label:'浏览器打开',act:'browser',icon:'mdi:web'},
       ]" @select="contextMenuSelected">
       </ContextMenu>
   </div>
@@ -163,6 +161,12 @@ export default {
 }
 </script>
 <style scoped>
+@keyframes song-in {
+  from{
+    transform: translateY(20px);
+    opacity: 0;
+  }
+}
 .color {
   background: var(--song-gap) !important;
 }
@@ -176,6 +180,7 @@ export default {
   color: var(--text-o-2);
   border-radius: var(--br-2);
   position: relative;
+  animation:  song-in .4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 .song-shell:hover {
   background: var(--hover);
@@ -400,6 +405,7 @@ export default {
 .trans-name {
   opacity: 0.8;
   margin-left: 0.5rem;
+  font-weight: 400;
 }
 .selector{
   width: 1.2rem;

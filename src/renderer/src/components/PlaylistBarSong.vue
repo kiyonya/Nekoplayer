@@ -7,7 +7,7 @@
     @dblclick.stop="play()"
   >
     <div class="cover-shell">
-      <img :data-src="resize(song.al.picUrl,100)" alt="" class="cover lazyload" />
+      <img :data-src="song?.al?.picUrl ? resize(song?.al?.picUrl,100) : song?.cover" alt="" class="cover lazyload" />
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" @click.stop="play()">
         <path
           fill="#fff"
@@ -19,8 +19,9 @@
     </div>
     <div class="info">
       <h3 class="text-limit">{{ song.name }}</h3>
-      <ArtistNameGroup :array="song.ar" class="text-limit"></ArtistNameGroup>
+      <ArtistNameGroup :array="song?.ar ? song?.ar : song?.artist" class="text-limit"></ArtistNameGroup>
     </div>
+    <Icon :icon="song?.local ? 'la:hdd-solid' : 'proicons:cloud'" style="position: absolute;right: 0.6rem; top: 0.5rem;" :title="song?.local ? '这首歌来自于本地磁盘' : '这首歌来自远程服务器'"/>
   </div>
 </template>
 <script>
@@ -28,9 +29,10 @@ import { observer } from '@/lib/lazyload'
 import ArtistNameGroup from './ArtistNameGroup.vue'
 import { resize } from '@/utils/imageProcess';
 import { player } from '@/main';
+import { Icon } from '@iconify/vue';
 export default {
   components: {
-    ArtistNameGroup
+    ArtistNameGroup,Icon
   },
   props: {
     song: {
@@ -46,6 +48,7 @@ export default {
   },
   mounted() {
     const song = this.$refs.song
+    
     observer(song)
   }
 }
@@ -53,13 +56,13 @@ export default {
 <style scoped>
 .song {
   width: calc(100% - 1rem);
-  height: fit-content;
-  position: relative;
+  height: 30px;
+  position: absolute;
   display: flex;
   flex-direction: row;
   gap: 0.7rem;
   padding: 0.5rem;
-  border-radius: 0.7rem;
+  border-radius: 0.2rem;
 }
 .song:hover {
   background: var(--hover);
@@ -80,7 +83,7 @@ export default {
 .song .cover-shell {
   width: 3rem;
   height: 3rem;
-  border-radius: 0.5rem;
+  border-radius: 0.2rem;
   position: relative;
   overflow: hidden;
   display: flex;

@@ -9,7 +9,7 @@ html[data-theme='dark'] {
   --ui: rgb(31,32,50);
   --ui-light: rgb(66, 66, 66);
   --ui-dark: rgb(45, 45, 45);
-  --hover: rgb(32,32,42);
+  --hover: rgb(47, 47, 61);
   --border: rgba(87, 87, 87, 0.321);
   --border-light: rgb(109, 109, 109);
   /* --strong: rgb(133, 141, 255);
@@ -41,9 +41,9 @@ html[data-theme='dark'] {
   --opacity-5: 0.45;
   --scrollbar-background: transparent;
   --scrollbar-color: rgb(169, 169, 169);
-  --br-1: 0.3rem;
-  --br-2: 0.5rem;
-  --br-3: 0.8rem;
+  --br-1: 0rem;
+  --br-2: 0rem;
+  --br-3: 0rem;
   --br-4: 1rem;
   --br-p-1: 5px;
   --br-p-2: 8px;
@@ -80,7 +80,7 @@ html[data-theme='light'] {
   --component-no-op:rgb(255,255,255);
   --component: rgb(255, 255, 255);
   --component-diff:rgba(255, 255, 255, 0.4);
-  --ui: rgb(248, 248, 250);
+  --ui: rgba(236, 236, 236, 0.906);
   --ui-light: rgb(236, 237, 239);
   --ui-dark: rgb(219, 221, 223);
   --hover: rgba(220, 220, 220, 0.7);
@@ -145,18 +145,19 @@ html[data-theme='light'] {
 
 html[data-theme='ocean'] {
   /**/
-  --app: rgb(247, 254, 255);
-  --app-light: rgb(242, 255, 255);
+  --root:rgb(199, 244, 255);
+  --app: rgb(217, 251, 255);
+  --app-light: rgb(150, 211, 228);
   --app-dark: rgb(192, 240, 255);
-  --component: rgb(247, 254, 255);
+  --component: rgb(234, 253, 255);
   --component-diff:rgb(177, 218, 255);
-  --ui: rgb(240, 241, 243);
-  --ui-light: rgb(236, 237, 239);
-  --ui-dark: rgb(219, 221, 223);
+  --ui: rgb(255, 230, 70);
+  --ui-light: rgb(255, 230, 70);
+  --ui-dark: rgb(255, 230, 70);
   --hover: rgb(234, 234, 234);
   --border: rgb(218, 220, 223);
   --border-light: rgb(228, 230, 233);
-  --strong: rgb(85, 167, 255);
+  --strong: rgb(255, 182, 11);
   --strong-light: rgb(109, 211, 255);
   --strong-dark: rgb(113, 119, 242);
   --strong-background: #6970eb;

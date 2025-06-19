@@ -1,28 +1,43 @@
-import { createReadStream, createWriteStream, existsSync, promises, readdir, readdirSync } from 'fs'
-import localAPI from './local_music_loader'
+import { createWriteStream, existsSync } from 'fs'
 import { logger } from './log'
 import { readFile } from 'fs/promises'
 import { getBillboardVOCALOIDSongs } from './plugins/billboard_vocaloid_rank'
-import { read } from 'jsmediatags'
-import { match } from 'assert'
-import { search_match } from 'NeteaseCloudMusicApi'
+import { is } from '@electron-toolkit/utils'
 const {
   ipcMain,
   app,
   dialog,
-  ipcRenderer,
   Tray,
   Menu,
   nativeImage,
   powerSaveBlocker,
-  powerMonitor
+  powerMonitor,
+  ipcRenderer
 } = require('electron')
 const path = require('path')
 const crypto = require('crypto')
 const fs = require('fs')
-const jsmediatags = require('jsmediatags')
 const musicMeta = require('music-metadata')
-export function registIPC(windowManager) {
+const https = require('https')
+const http = require('http')
+const staticResourcesPath = process.resourcesPath
+function getResourcesPath() {
+  if (!app.isPackaged) {
+    return path.join(__dirname, '../../resources')
+  }
+  return path.join(process.resourcesPath, '/resources')
+}
+import { windowManager } from '.'
+import { createDesktopPlayer, killDesktopPlayer } from './desktop_player'
+import { createMusicDesktop } from './music_desktop'
+import { captcha_verify, login_cellphone } from 'NeteaseCloudMusicApi'
+
+const saveData = {
+  nowPlaying: null,
+  currentTime: 0
+}
+
+export function registIPC() {
   ipcMain.on('app:openWebView', (e, url) => {
     const webView = windowManager.createWindow('webview')
     console.log(url)
@@ -100,6 +115,13 @@ export function registIPC(windowManager) {
       main.webContents.send('desktop:ready')
     }
   })
+  ipcMain.on('app:useDesktopPlayer', () => {
+    if (windowManager.getWindow('desktop')) {
+      killDesktopPlayer()
+    } else {
+      createDesktopPlayer()
+    }
+  })
   ipcMain.on('app:msgbox', (e, opt) => {
     const { title = '信息', message = '默认信息' } = opt
     const msg = dialog.showMessageBox(windowManager.getWindow('main'), {
@@ -124,6 +146,35 @@ export function registIPC(windowManager) {
   ipcMain.on('shell:openExplorer', (e, path) => {
     openExplorer(path)
   })
+
+  ipcMain.on('player:nowplaying', (e, nowplaying) => {
+    saveData.nowPlaying = nowplaying
+    const musicDesktop = windowManager.getWindow('musicdesktop')
+    if (musicDesktop) {
+      musicDesktop.webContents.send('musicdesktop:nowplaying', nowplaying)
+    }
+  })
+
+  ipcMain.on('player:timeupdate', (e, currentTime) => {
+    saveData.currentTime = currentTime
+    const musicDesktop = windowManager.getWindow('musicdesktop')
+    if (musicDesktop) {
+      musicDesktop.webContents.send('musicdesktop:timeupdate', currentTime || 0)
+    }
+  })
+
+  ipcMain.on('musicdesktop:init', (e) => {
+    const musicDesktop = windowManager.getWindow('musicdesktop')
+    if (musicDesktop) {
+      musicDesktop.webContents.send('musicdesktop:nowplaying', saveData.nowPlaying)
+      musicDesktop.webContents.send('musicdesktop:timeupdate', saveData.currentTime)
+    }
+  })
+
+  ipcMain.on('app:useMusicDesktop', (e, pathname = 'oldplayer') => {
+    createMusicDesktop(pathname)
+  })
+
   //   ipcMain.handle('dialog:fsopen', async (e, opt) => {
   //     const path = await fsopen(opt)
   //     return path
@@ -277,30 +328,30 @@ export function registIPC(windowManager) {
             error: '文件不存在'
           })
         } else {
-          getFileHash(song).then(hash=>{
+          getFileHash(song).then((hash) => {
             musicMeta
-            .parseFile(song)
-            .then((meta) => {
-              const { common, format } = meta
-              resolve({
-                success: true,
-                meta: {
-                  ...common,
-                  ...format
-                },
-                path: song,
-                time: fs.statSync(song).mtimeMs,
-                size: fs.statSync(song).size,
-                hash
+              .parseFile(song)
+              .then((meta) => {
+                const { common, format } = meta
+                resolve({
+                  success: true,
+                  meta: {
+                    ...common,
+                    ...format
+                  },
+                  path: song,
+                  time: fs.statSync(song).mtimeMs,
+                  size: fs.statSync(song).size,
+                  hash
+                })
               })
-            })
-            .catch((error) => {
-              resolve({
-                success: false,
-                error,
-                hash
+              .catch((error) => {
+                resolve({
+                  success: false,
+                  error,
+                  hash
+                })
               })
-            })
           })
         }
       })
@@ -335,7 +386,7 @@ export function registIPC(windowManager) {
     }
   })
   ipcMain.handle('file:getFilesMd5', async (e, files = []) => {
-    files.map(file=>getFileHash(file))
+    files.map((file) => getFileHash(file))
     const hashs = await Promise.all()
   })
   ipcMain.handle('file:readFileBuffer', async (e, filepath) => {
@@ -348,6 +399,17 @@ export function registIPC(windowManager) {
       buffer: buffer,
       size: buffer.length,
       filepath
+    }
+  })
+  ipcMain.handle('file:readFileStream', async (e, filepath) => {
+    if (!existsSync(filepath)) {
+      return { exists: false }
+    } else {
+      return {
+        exists: true,
+        stream: fs.createReadStream(filepath),
+        filepath
+      }
     }
   })
   ipcMain.handle('file:deleteFile', async (e, filepath) => {
@@ -371,8 +433,7 @@ export function registIPC(windowManager) {
         return { success: true }
       }
     })
-  }
-  )
+  })
   ipcMain.handle('billboard:getVocaloidRank', (e, y, m, d, r) => {
     return getBillboardVOCALOIDSongs(y, m, d, r)
   })
@@ -390,7 +451,7 @@ export function registIPC(windowManager) {
     }
   })
   ipcMain.handle('dialog:openFile', async (e, opt) => {
-    const { title = '选择文件', defaultPath = '', properties = [] ,filters = []} = opt || {}
+    const { title = '选择文件', defaultPath = '', properties = [], filters = [] } = opt || {}
     const result = await dialog.showOpenDialog(windowManager.getWindow('main'), {
       properties: ['openFile', ...properties],
       title,
@@ -404,7 +465,7 @@ export function registIPC(windowManager) {
     }
   })
   ipcMain.handle('dialog:saveFile', async (e, opt) => {
-    const { title = '保存文件' ,filters = [],defaultPath = ''} = opt || {}
+    const { title = '保存文件', filters = [], defaultPath = '' } = opt || {}
     const result = await dialog.showSaveDialog(windowManager.getWindow('main'), {
       title,
       filters,
@@ -416,19 +477,181 @@ export function registIPC(windowManager) {
       return result.filePath
     }
   })
+  ipcMain.handle('file:exists', async (e, files) => {
+    const loss = []
+    for (const file of files) {
+      if (!fs.existsSync(file)) {
+        loss.push(file)
+      }
+    }
+    if (loss.length == 0) {
+      return null
+    }
+    return loss
+  })
+  ipcMain.handle('file:exist', async (e, file) => {
+    return fs.existsSync(file)
+  })
+  ipcMain.handle('tool:downloadFileTo', async (e, { url, filepath, filename }) => {
+    if (!url || !filepath || !filename) {
+      throw new Error('缺少必要参数: url, filepath 或 filename')
+    }
+    if (!fs.existsSync(filepath)) {
+      fs.mkdirSync(filepath, { recursive: true })
+    }
+    const fullPath = path.join(filepath, filename)
+    const client = url.startsWith('https') ? https : http
+    return new Promise((resolve, reject) => {
+      const fileStream = fs.createWriteStream(fullPath)
+      const request = client.get(url, (response) => {
+        if (response.statusCode !== 200) {
+          fileStream.close()
+          fs.unlinkSync(fullPath)
+          return reject(`下载失败，HTTP状态码: ${response.statusCode}`)
+        }
+
+        // 管道传输数据
+        response.pipe(fileStream)
+        fileStream.on('finish', () => {
+          fileStream.close()
+          resolve({
+            success: true,
+            path: fullPath,
+            size: fs.statSync(fullPath).size
+          })
+        })
+      })
+
+      // 错误处理
+      request.on('error', (err) => {
+        fileStream.close()
+        fs.unlinkSync(fullPath)
+        reject(`请求错误: ${err.message}`)
+      })
+
+      fileStream.on('error', (err) => {
+        request.destroy()
+        fs.unlinkSync(fullPath)
+        reject(`文件写入错误: ${err.message}`)
+      })
+
+      request.setTimeout(30000, () => {
+        request.destroy()
+        fileStream.close()
+        fs.unlinkSync(fullPath)
+        reject('下载超时')
+      })
+    })
+  })
+  ipcMain.handle("tool:getFolderSize",async (e,folderPath)=>{
+    if(!fs.existsSync(folderPath)){
+      return null
+    }
+    return getLargeFolderSizeBatched(folderPath)
+  })
+  ipcMain.handle("auth:loginAsCaptcha",async (e,phone,captcha)=>{
+    const request = await captcha_verify({phone,captcha})
+    login_cellphone
+    
+    if(request.body?.data === true){
+      return request
+    }
+    else{
+      return null
+    }
+  })
+  ipcMain.on("dev:openDevTool",async (e)=>{
+    let mainWindow = windowManager.getWindow("main")
+    if(mainWindow){
+      mainWindow.webContents.openDevTools({
+          mode: 'detach',
+          activate: true,
+          title: 'DevTools',
+          preferences: {
+            'enable-autofill': true
+          }
+      })
+    }
+  })
 }
 
 export function registerTray() {
-  const ico = nativeImage.createFromPath('./assets/icon.png')
+  const mainWindow = windowManager.getWindow('main')
+  const ico = path.join(__dirname, '../renderer/icon.png')
+
   const tray = new Tray(ico)
   const menu = Menu.buildFromTemplate([
-    { label: 'Item1', type: 'radio' },
-    { label: 'Item2', type: 'radio' },
-    { label: 'Item3', type: 'radio', checked: true },
-    { label: 'Item4', type: 'radio' }
+    {
+      label: '播放/暂停',
+      click: () => {
+        mainWindow.webContents.send('player:toggleplay')
+      }
+    },
+    {
+      label: '上一首',
+      click: () => {
+        mainWindow.webContents.send('player:previous')
+      }
+    },
+    {
+      label: '下一首',
+      click: () => {
+        mainWindow.webContents.send('player:next')
+      }
+    },
+    {
+      label: '播放模式',
+      type: 'submenu',
+      submenu: [
+        {
+          label: '单曲循环',
+          click: () => {
+            mainWindow.webContents.send('player:playmode', 'loop')
+          }
+        },
+        {
+          label: '列表循环',
+          click: () => {
+            mainWindow.webContents.send('player:playmode', 'list')
+          }
+        },
+        {
+          label: '列表随机',
+          click: () => {
+            mainWindow.webContents.send('player:playmode', 'random')
+          }
+        }
+      ]
+    },
+    {
+      label: '桌面播放器',
+      click: () => {
+        if (windowManager.getWindow('desktop')) {
+          killDesktopPlayer()
+        } else {
+          createDesktopPlayer()
+        }
+      }
+    },
+    {
+      label: '退出',
+      type: 'normal',
+      click: () => {
+        windowManager.closeAllWindows()
+        app.quit()
+      }
+    }
   ])
   tray.setContextMenu(menu)
+
   tray.setToolTip('nekoplayer')
+  tray.on('click', () => {
+    if (mainWindow.isVisible()) {
+      mainWindow.hide()
+    } else {
+      mainWindow.show()
+    }
+  })
 }
 
 export function registerPowerEvents() {
@@ -448,15 +671,54 @@ export function registerPowerEvents() {
     }
   })
 }
-async function fsopen(opt) {
-  const path = await dialog.showOpenDialog(opt)
-  if (!path.canceled) {
-    return path.filePaths
-  } else {
-    return undefined
-  }
-}
 
+export function registerSystemTaskbar(windowManager) {
+  const mainWindow = windowManager.getWindow('main')
+  let thumbarButtons = [
+    {
+      tooltip: '1',
+      icon: nativeImage.createFromPath(path.join(getResourcesPath(), '/taskbar', 'previous.png')),
+      click() {
+        mainWindow.webContents.send('player:previous')
+      }
+    },
+    {
+      tooltip: '2',
+      icon: nativeImage.createFromPath(path.join(getResourcesPath(), '/taskbar', 'play.png')),
+      click() {
+        mainWindow.webContents.send('player:toggleplay')
+      }
+    },
+    {
+      tooltip: '2',
+      icon: nativeImage.createFromPath(path.join(getResourcesPath(), '/taskbar', 'next.png')),
+      click() {
+        mainWindow.webContents.send('player:next')
+      }
+    }
+  ]
+  ipcMain.on('player:pause', () => {
+    thumbarButtons[1] = {
+      tooltip: '2',
+      icon: nativeImage.createFromPath(path.join(getResourcesPath(), '/taskbar', 'play.png')),
+      click() {
+        mainWindow.webContents.send('player:toggleplay')
+      }
+    }
+    mainWindow.setThumbarButtons(thumbarButtons)
+  })
+  ipcMain.on('player:play', () => {
+    thumbarButtons[1] = {
+      tooltip: '2',
+      icon: nativeImage.createFromPath(path.join(getResourcesPath(), '/taskbar', 'pause.png')),
+      click() {
+        mainWindow.webContents.send('player:toggleplay')
+      }
+    }
+    mainWindow.setThumbarButtons(thumbarButtons)
+  })
+  mainWindow.setThumbarButtons(thumbarButtons)
+}
 function getFileHash(filePath) {
   return new Promise((resolve, reject) => {
     const hash = crypto.createHash('md5')
@@ -471,4 +733,28 @@ function getFileHash(filePath) {
       reject(err)
     })
   })
+}
+async function getLargeFolderSizeBatched(folderPath, batchSize = 100) {
+  let totalSize = 0;
+  let dirsToProcess = [folderPath];
+  while (dirsToProcess.length > 0) {
+    const currentDir = dirsToProcess.shift();
+    const entries = await fs.promises.readdir(currentDir, { withFileTypes: true });
+    for (let i = 0; i < entries.length; i += batchSize) {
+      const batch = entries.slice(i, i + batchSize);
+      const statsPromises = batch.map(entry => {
+        const fullPath = path.join(currentDir, entry.name);
+        return entry.isDirectory() 
+          ? (dirsToProcess.push(fullPath), Promise.resolve(null))
+          : fs.promises.stat(fullPath);
+      });
+      const statsResults = await Promise.all(statsPromises);
+      for (const stat of statsResults) {
+        if (stat && !stat.isDirectory()) {
+          totalSize += stat.size;
+        }
+      }
+    }
+  }
+  return totalSize;
 }

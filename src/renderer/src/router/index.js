@@ -13,9 +13,6 @@ const router = createRouter({
       path: '/playlist/:id',
       component: () => import('../views/Playlist/Playlist.vue'),
       props: true,
-      meta:{
-        top:0
-      }
     },
     {
       name: 'Artist',

@@ -51,7 +51,7 @@ export default {
         Icon, ContextMenu
     },
     props: ["cover", "name", "subtitle", "maininfo", "info", "desc", "onplayall", "onsubtitleclick", "oncreatorclick", "creator"],
-    emits: ['playall', 'addlist', 'edit','browser'],
+    emits: ['playall', 'addlist', 'edit','browser','descClick'],
     methods: {
         contextMenuSelected(e) {
             const act = e.act
@@ -101,14 +101,14 @@ export default {
     width: 100%;
     height: 100%;
     position: absolute;
-    border-radius: 5%;
+    border-radius: var(--br-3);
 }
 
 .cover .blur {
     width: 95%;
     aspect-ratio: 1/1;
     position: absolute;
-    border-radius: 5%;
+    border-radius: var(--br-3);
     z-index: -1;
     filter: blur(15px);
     bottom: -1rem;
@@ -209,20 +209,32 @@ export default {
     align-items: center;
     justify-content: center;
     padding: 0.4rem;
-    border-radius: 5px;
+    border-radius: var(--br-1);
     color: var(--text-o-2);
     font-size: 1.2rem;
     gap: 0.2rem;
     box-shadow: var(--shadow);
 }
+@property --gp{
+    syntax: "<percentage>";
+        initial-value: 0%;
+        inherits: false;
+}
+@keyframes play-in {
+    from{
+        --gp:0%
+    }
+}
 
 .btns button:first-child {
+    --gp:100%;
     padding: 0.4rem 1rem;
     aspect-ratio: auto;
-    background: var(--strong-light);
+    background: linear-gradient(to right,var(--strong-light) var(--gp) ,transparent var(--gp));
     font-weight: 600;
     color: white;
     fill: white;
+    animation:  play-in .5s;
 }
 
 .btns button .i {

@@ -5,14 +5,14 @@ export function createWaveDesktop() {
   const primaryDisplay = screen.getPrimaryDisplay()
   const { width, height } = primaryDisplay.workAreaSize
   const waveDesktopWindow = new BrowserWindow({
-    transparent: true,
-    frame: false,
+    // transparent: true,
+    // frame: false,
     autoHideMenuBar: true,
     type:'desktop',
-    resizable: false,
-    fullscreen:true,
-    show: false,
-    alwaysOnTop:false,
+    // resizable: false,
+    // fullscreen:true,
+    // show: false,
+    // alwaysOnTop:false,
     webPreferences: {
       nodeIntegration: true,
       sandbox: false,

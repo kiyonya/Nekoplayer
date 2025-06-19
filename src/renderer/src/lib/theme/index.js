@@ -93,7 +93,6 @@ export function setTheme({ key, value }) {
     useUIColor(value)
   }
   localStorage.setItem('neko_app_theme', JSON.stringify(theme.value))
-  console.log('主题已保存')
 }
 
 function compileColor(color) {
@@ -105,7 +104,6 @@ function compileColor(color) {
     } else {
       theme.value = { key: 'computedColor', value: 'dark' }
     }
-    console.log(theme)
   } else {
     theme.value = { key: 'computedColor', value: color }
   }

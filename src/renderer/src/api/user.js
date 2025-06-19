@@ -13,7 +13,6 @@ export async function getUserPlaylist(uid) {
     create: [],
     collect: []
   }
-  console.log(data?.playlist)
   for (let p of data.playlist) {
     if (p?.creator?.userId == uid) {
       playlist.create.push(p)

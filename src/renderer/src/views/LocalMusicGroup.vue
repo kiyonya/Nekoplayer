@@ -94,6 +94,7 @@ import { Icon } from '@iconify/vue';
 import LocalSong from '@/components/LocalSong.vue';
 import { getDate } from '@/utils/timers';
 import { onActivated } from 'vue';
+import { showConfirmDialog } from '@/components/notification/use_notification';
 const cover = ref("")
 const detail = ref({})
 const id = ref("")
@@ -127,6 +128,23 @@ let groupId;
     }
     detail.value = data.detail
     const groupSongs = await localMusic.getSongsDataByMd5(data?.songs)
+    const loss = await localMusic.checkFileExists(groupSongs)
+    console.log(loss)
+
+    if(loss){
+        const msg = `当前音乐集缺失以下文件，已从集合中去除 \n\n ${loss.map(i=>i.path).join("\n")}`
+        showConfirmDialog("文件缺失",msg,[{label:"确定",style:"strong"}])
+        for (let lo of loss){
+            deleteInGroup(lo.md5)
+        }
+    }
+
+
+
+
+
+
+
 
     songs.value = groupSongs.map((i,index)=>{
         return {

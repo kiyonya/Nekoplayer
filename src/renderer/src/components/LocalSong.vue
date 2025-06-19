@@ -31,7 +31,7 @@
             { label: '设置歌词', act: 'setLyric', icon: 'material-symbols:lyrics' },
             // { label: '设置为封面', act: 'setcover', icon: 'humbleicons:image',disrender:cover ? false : true },
             { label: '从集合中删除', act: 'deleteInGroup', icon: 'material-symbols:delete-outline' },
-             
+
             { label: '删除本地文件', act: 'delete', icon: 'material-symbols:delete-outline', style: 'color:red' },
         ]" @select="contextMenuSelected">
         </ContextMenu>
@@ -45,7 +45,7 @@
                 <div class="info-window">
                     <h3> {{ name }}</h3>
                     <span class="artist text-limit no-match" v-if="!matched">{{artist.map(i => i.name).join("/")
-                        }}</span>
+                    }}</span>
                     <ArtistNameGroup :array="artist" v-if="matched" class="artist"></ArtistNameGroup>
                 </div>
             </div>
@@ -67,14 +67,14 @@
                 <div class="info-window">
                     <h3> {{ name }}</h3>
                     <span class="artist text-limit no-match" v-if="!matched">{{artist.map(i => i.name).join("/")
-                        }}</span>
+                    }}</span>
                     <ArtistNameGroup :array="artist" v-if="matched" class="artist"></ArtistNameGroup>
                 </div>
             </div>
             <p style="color: red;font-weight: bold;margin-top: 1rem;">这个操作会删除本地的文件，这个文件会消失很久，真的很久！</p>
             <div class="button-group">
                 <button @click="showWarn = false" class="cancel">取消</button>
-                <button @click="() => { $emit('delete', path,md5); showWarn = false }" class="confirm">我清楚我在做什么</button>
+                <button @click="() => { $emit('delete', path, md5); showWarn = false }" class="confirm">我清楚我在做什么</button>
             </div>
         </ModalWindow>
     </div>
@@ -197,8 +197,8 @@ export default {
                 setCover: () => {
                     this.$emit('setcover', this.path, this.md5)
                 },
-                setLyric:(()=>{
-                    this.$emit('setlyric',this.md5)
+                setLyric: (() => {
+                    this.$emit('setlyric', this.md5)
                 })
             }
             if (actions[act]) {
@@ -206,10 +206,23 @@ export default {
             }
         },
     },
-    emits: ['play', 'delete', 'deleteInGroup', 'setcover','setlyric'],
+    emits: ['play', 'delete', 'deleteInGroup', 'setcover', 'setlyric'],
 }
 </script>
 <style scoped>
+@keyframes song-in {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+}
+
+@keyframes cover-fade {
+    from {
+        opacity: 0;
+    }
+}
+
 .local {
     display: flex;
     flex-direction: row;
@@ -225,6 +238,7 @@ export default {
     --cover-size: 3.5rem;
     box-sizing: border-box;
     padding: 0.2rem 1rem 0.2rem 0;
+    animation: song-in .4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 
     .cover-shell {
         width: var(--cover-size);
@@ -235,11 +249,13 @@ export default {
         background-color: var(--ui);
     }
 
+
     .cover {
         width: 100%;
         height: 100%;
         border-radius: 0.5rem;
         object-fit: cover;
+        animation: cover-fade .4s ease-in-out;
     }
 
     .play {

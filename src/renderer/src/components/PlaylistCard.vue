@@ -1,5 +1,5 @@
 <template>
-  <div class="playlist-card" :style="{ animationDelay: delay }" @click="jump" @keydown.enter="jump">
+  <div class="playlist-card" @click="jump" @keydown.enter="jump">
     <div class="cover">
       <img
         :data-src="this.cover + '?param=500y500'"
@@ -7,6 +7,7 @@
         class="main lazyload"
         v-lazy
         crossorigin="anonymous"
+        style="opacity: 0;"
       />
       <img
         :data-src="this.cover + '?param=500y500'"
@@ -14,6 +15,7 @@
         class="blur lazyload"
         v-lazy
         crossorigin="anonymous"
+        style="opacity: 0;"
       />
 
       <button
@@ -101,39 +103,30 @@ export default {
 <style scoped>
 @keyframes playlist-card-in {
   from {
-    transform: translateY(20px);
+    transform: translateY(30px);
     opacity: 0;
     filter: blur(1px);
   }
-
-  to {
-    transform: translateY(0px);
-    opacity: 1;
-    filter: blur(0px);
-  }
 }
-
 .playlist-card {
-  opacity: 0;
   height: fit-content;
   width: 100%;
   position: relative;
   display: flex;
   flex-direction: column;
-  animation: playlist-card-in 0.4s ease forwards;
+  animation: playlist-card-in .3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   grid-column: auto;
   grid-row: auto;
   min-width: 0;
-  
-}
 
+}
 .playlist-card:hover .blur {
   bottom: -0.6rem;
   opacity: 0.4;
   transition: 0.3s cubic-bezier(0.23, 1, 0.32, 1);
 }
 .playlist-card:hover .main {
-  transform: scale(1.01);
+  transform: scale(1.05);
   transition: 0.3s cubic-bezier(0.23, 1, 0.32, 1);
 }
 .playlist-card .type {
@@ -161,6 +154,7 @@ export default {
   aspect-ratio: 1/1;
   position: absolute;
   border-radius: var(--br-1);
+  transition: .3s;
 }
 
 .cover .blur {
@@ -175,13 +169,13 @@ export default {
   margin-top: 0.4rem;
   font-size: 1.1rem;
   font-weight: 600;
-  opacity: var(--text-opacity-2);
+  opacity: var(--text-o-3);
 }
 
 .playlist-card .playlist-count {
   font-size: 0.9rem;
   margin-top: 0.3rem;
-  opacity: var(--text-opacity-3);
+  opacity: var(--text-o-4);
   left: 0;
   bottom: 0;
 }

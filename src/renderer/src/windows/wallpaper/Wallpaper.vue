@@ -101,7 +101,7 @@
 import { onUnmounted } from 'vue'
 import { ref, watch } from 'vue'
 import { onMounted } from 'vue'
-import { getColor } from '@/musicplayer/color'
+import { getColor } from '@/components/musicplayer/color'
 import { onBeforeMount } from 'vue'
 import { resize } from '@/utils/imageProcess'
 import { initBackground, destoryBackground } from './wallpaper_background_renderer'

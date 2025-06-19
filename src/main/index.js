@@ -1,31 +1,28 @@
-import {
-  app,
-  shell,
-  BrowserWindow,
-  ipcMain,
-  dialog,
-  Menu,
-  Tray,
-  Notification,
-  session
-} from 'electron'
+import { app, shell, ipcMain, dialog, nativeImage, protocol, webFrame } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
-import { createWaveDesktop } from './extend/musicDesktop'
 import icon from '../../resources/icon.png?asset'
 import path from 'node:path'
-import { attach, detach } from 'electron-as-wallpaper'
 import WindowManager from './windows'
-import { registerPowerEvents, registerTray, registIPC } from './ipcEvents'
+import { registerPowerEvents, registerSystemTaskbar, registerTray, registIPC } from './ipcEvents'
 import { startNcmApi } from 'NeteaseCloudMusicApi/app'
+import fs from 'fs'
+const AUDIO_MIME_TYPES = {
+  '.mp3': 'audio/mpeg',
+  '.wav': 'audio/wav',
+  '.flac': 'audio/flac',
+  '.ogg': 'audio/ogg',
+  '.aac': 'audio/aac',
+}
+const staticResourcesPath = process.resourcesPath
 startNcmApi(11451)
 const windowManager = new WindowManager()
 export { windowManager }
 const mainWindowOptions = {
   width: 1270,
-  height: 775,
+  height: 850,
   minWidth: 1270,
-  minHeight:775,
+  minHeight: 775,
   show: false,
   frame: false,
   autoHideMenuBar: true,
@@ -36,11 +33,14 @@ const mainWindowOptions = {
     sandbox: false,
     nodeIntegration: true,
     contextIsolation: false,
-    webSecurity: false,
+    webSecurity: false
   }
 }
 function ready() {
+
+
   const mainWindow = windowManager.createWindow('main', mainWindowOptions)
+  
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
     mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
   } else {
@@ -48,21 +48,24 @@ function ready() {
   }
   //mainWindow.webContents.openDevTools()
   mainWindow.webContents.on('did-finish-load', () => {
-    if(is.dev){
+    if (is.dev) {
       setTimeout(() => {
         mainWindow.webContents.openDevTools({
-          mode:'detach',
+          mode: 'detach',
           activate: true,
           title: 'DevTools',
           preferences: {
-            'enable-autofill': true,
+            'enable-autofill': true
           }
-        });
-      }, 1000); 
+        })
+        
+      }, 1000)
     }
-  });
-
-  
+  })
+  mainWindow.on('ready-to-show',()=>{
+    registerSystemTaskbar(windowManager)
+  })
+  console.log(mainWindow.getNativeWindowHandle().readInt32LE())
   // const desktop = windowManager.createWindow('desktop',
   //   {
   //     width: 500,
@@ -130,7 +133,7 @@ function ready() {
 app.whenReady().then(() => {
   ready()
   registIPC(windowManager)
-  registerTray()
+  registerTray(windowManager)
   registerPowerEvents()
 })
 

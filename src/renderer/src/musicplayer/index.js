@@ -2,7 +2,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import temp from '../store/temp'
 import { handleScroller } from './lyric'
 import { store } from '../store'
-import { getColor } from './color'
+import { getColor } from '../components/musicplayer/color'
 import { destoryDynamic, initDynamic } from './dynamic'
 import { getSongChorus } from '../api/song'
 const audio = temp.audio

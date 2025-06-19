@@ -1,7 +1,7 @@
 <template>
   <Teleport to="body">
     <div class="modal-backdrop" :style="props.mask ? 'background-color: rgba(0, 0, 0, 0.341);backdrop-filter: blur(1px);' : ''">
-    <div class="modal_inner_window">
+    <div class="modal_inner_window" :style="{minWidth:minWidth,minHeight:minHeight}">
       <div class="window-control">
         <button @click.top="emits('close')" class="close-button"><Icon icon="material-symbols:close-rounded" class="icon" style="color: var(--text);"/></button>
       </div>
@@ -20,6 +20,14 @@ const props = defineProps({
   },
   title:{
     type:String,
+  },
+  minWidth:{
+    type:String,
+    default:"30rem"
+  },
+  minHeight:{
+    type:String,
+    default:"20rem"
   }
 })
 const emits = defineEmits(['close'])

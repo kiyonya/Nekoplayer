@@ -10,7 +10,7 @@ import { getAlbum } from '@/api/album'
 import { getArtistBriefAndSongs, getArtistDetial } from '@/api/artist'
 import { getDailySong, personalFM } from '@/api/recommend'
 import { cacheAudioFromUrl, readAudioCacheFile } from '../cache/cacheAudio'
-import { showSideNotification } from '@/components/notification/use_notification'
+import { showConfirmDialog, showSideNotification } from '@/components/notification/use_notification'
 import { getLyric } from '@/api/lyric'
 import { AudioManager } from './audio'
 import Dexie from 'dexie'
@@ -27,8 +27,7 @@ import {
 } from '@/api/lt'
 import { resize } from '@/utils/imageProcess'
 import { localMusic } from '@/main'
-const path = require('path')
-const os = require('os')
+import path from 'path-browserify'
 const config = computed(() => {
   return store.state.config
 })
@@ -48,9 +47,9 @@ export default class Player {
     this.audioManager = new AudioManager()
     this.audioCacheDB = new Dexie('audioCacheDB')
     this.audioCacheDB.version(1).stores({
-      audioCache: '++id,resource,linkpath',
-      lyricCache: '++id,resource,lyric',
-      musicDetialCache: '++id,resource,detial,coverpath,audiopath'
+      audioCache: 'resource,linkpath',
+      lyricCache: 'resource,lyric',
+      musicDetialCache: 'resource,detial,coverpath'
     })
     this.playmode = 'list'
     this.useShuffle = false
@@ -89,14 +88,19 @@ export default class Player {
       hintText: '',
       formerSongId: 0,
       targetSongId: 0,
-      lastProgress: 0
+      lastProgress: 0,
+      progress: undefined
     }
+    this.quickPlayAudios = {}
     this.listentogetherClientSeq = 1
+    this.listentogetherServerSeq = Date.now()
     this.beforeJoinSaved = {
       shuffle: [],
       list: [],
       index: 0
     }
+    this.listentogetherActionFreeze = false
+    this.listentogetherActionFreezeInterval = null
     this.listentogetherPollingInterval = null
     this.listentogetherPlaymode = 'ORDER_LOOP'
     this.INIT()
@@ -168,11 +172,18 @@ export default class Player {
   }
   play(id, source) {
     if (source.type === 'localgroup') {
-      console.log(this.list)
       this.playLocalMusic(id)
+    } else if (source.type === 'pfm') {
+      getSongDetial(id).then((data) => {
+        data = data?.songs?.[0] || {}
+        this.updatePersonalFM({ ...data, album: data?.al, artists: data?.ar })
+        data = null
+      })
+      this.playMusicOnNcm(id)
     } else {
       this.playMusicOnNcm(id)
       if (config.value.allowScrobble) {
+        console.log("提交",id,source)
         this.scrobbleTrack(id, source)
       }
     }
@@ -261,41 +272,22 @@ export default class Player {
       this.play(start, source)
     }
   }
-  playPersonalFM(first = true, preload) {
-    const info = first ? this.personalFMList.shift() : preload
-    if (!this.personalFMInit || !info) {
-      return
-    }
-    this.updatePersonalFM(info)
-    const id = info?.id
+  playPersonalFM(first = true) {
     this.isPersonalFM = true
-    this.getAudioSourceFromNcm(id).then((url) => {
-      this.replaceTrack(id, url, this.autoplay)
-    })
-    this._updateLyric([])
-    nekoLyricObjectGenerator(id).then((lyric) => {
-      this._updateLyric(lyric)
-    })
-    getLyric(id).then((data) => store.commit('updateLyric', data))
-    getDynamicCover(id).then((data) => {
-      this.updateDynamicCover(data?.data)
-    })
-    this.updateNowPlaying({
-      name: info?.name,
-      id: id,
-      cover: info?.album?.picUrl,
-      artist: info?.artists,
-      album: info?.album,
-      duration: info?.duration,
-      tns: info?.tns || null,
-      alias: info?.alias || null,
-      mv: info?.mv || null,
-      expectQuality: this.quality,
-      type: 'net',
-      local: false,
-      reason: info?.reason,
-      format: {}
-    })
+    if (this.personalFMList && this.personalFMList.length > 1) {
+      this.list = this.personalFMList.map((i) => {
+        return {
+          id: i.id,
+          source: {
+            id: null,
+            type: 'pfm'
+          }
+        }
+      })
+      this.play(this.list[0].id, this.list[0].source)
+    } else {
+      this.nextFM()
+    }
   }
 
   automap(list, source) {
@@ -304,27 +296,40 @@ export default class Player {
     })
   }
   nextFM() {
-    if (this.personalFMList.length < 5) {
+    if (!this.isPersonalFM) {
+      return
+    }
+    let cursor = this.getCursor()
+    if (this.list.length - cursor <= 5) {
       this.getPersonalFMTracks().then((songs) => {
         for (const i of songs) {
           const isRepeat = this.personalFMList.findIndex((t) => t.id === i.id)
           if (isRepeat < 0) {
-            this.personalFMList.push(i)
+            this.list.push({
+              id: i.id,
+              source: {
+                id: null,
+                type: 'pfm'
+              }
+            })
           }
         }
       })
     }
-    if (!this.isPersonalFM) {
-      return
-    }
+
     if (this.personalFMList.length <= 0) {
       showSideNotification('私人FM', '太快啦~还没有获得新的FM', 2000, (close) => {
         close()
       })
       return
     }
-    const info = this.personalFMList.shift()
-    this.playPersonalFM(false, info)
+    let nextTrack
+    if (cursor < this.list.length - 1) {
+      nextTrack = this.list[cursor + 1]
+    } else {
+      nextTrack = this.list[0]
+    }
+    this.play(nextTrack.id, nextTrack.source, false)
   }
   addTrackToNext(id, source) {
     const cursor = this.getCursor()
@@ -336,10 +341,10 @@ export default class Player {
     }
     this.listDetialCached = false
   }
-  async playMusicOnNcm(id) {
+  async playMusicOnNcm(id, opt = { listogetherCommandReciver: false }) {
     this.lastId = this.currentId
     this.currentId = id
-    if (this.isListentogether && this.listentogether.isHost) {
+    if (this.isListentogether && !opt.listogetherCommandReciver) {
       this.postPlayCommand(this.autoplay ? 'PLAY' : 'PAUSE')
       this.postHeartbeat(id)
     }
@@ -361,7 +366,6 @@ export default class Player {
       })
     }
     this.getSongDetialFromNcm(id).then((detial) => {
-      console.log(detial)
       this.updateNowPlaying(detial)
     })
 
@@ -397,9 +401,7 @@ export default class Player {
         const readResult = await window.api.readBuffer(coverid, config.value.cachePath)
         if (readResult.exists) {
           const blob = new Blob([readResult?.buffer])
-          console.log(blob)
           const objurl = URL.createObjectURL(blob)
-          console.log(objurl)
           resolve({ ...detial, cover: objurl })
         } else {
           resolve(detial)
@@ -419,22 +421,18 @@ export default class Player {
       return
     }
     const coverUrl = detial?.cover
-    console.log(coverUrl)
-    const res = await fetch(coverUrl)
-    if (res.ok) {
-      const blob = await res.blob()
-      const buffer = await blob.arrayBuffer()
-      console.log('封面buffer', buffer)
-      const coverid = `cover-${id}`
-      const cacheResult = await window.api.writeBuffer(coverid, config.value.cachePath, buffer)
-      console.log(cacheResult)
-      if (cacheResult?.success) {
-        this.audioCacheDB.musicDetialCache.put({
-          resource: id,
-          detial: JSON.stringify(detial),
-          coverpath: cacheResult?.filepath
-        })
-      }
+    const fileid = `cover-${id}`
+    const cacheResult = await window.electron.ipcRenderer.invoke('tool:downloadFileTo', {
+      url: coverUrl + '?params=500y500',
+      filepath: config.value.cachePath,
+      filename: fileid + '.cb'
+    })
+    if (cacheResult?.success) {
+      this.audioCacheDB.musicDetialCache.put({
+        resource: id,
+        detial: JSON.stringify(detial),
+        coverpath: cacheResult?.path
+      })
     }
   }
   replaceTrack(id, file, autoplay = true) {
@@ -453,6 +451,8 @@ export default class Player {
       showSideNotification('播放器通知', '当前播放列表已被修改', 2000, (close) => {
         close()
       })
+
+      this.isPersonalFM = false
     }
     this.listDetialCached = false
     this.updateNowPlayingSource(source)
@@ -464,6 +464,12 @@ export default class Player {
     if (playfirst) {
       this.play(this.list[0]?.id, source)
     }
+  }
+  clearPlaylist(){
+    let now = this.list.filter(i=>i.id == this.currentId)
+    console.log(now)
+    this.list = [...now]
+    
   }
   replacePlaylist(source) {
     return new Promise((resolve, reject) => {
@@ -514,7 +520,6 @@ export default class Player {
         }
       } else if (type === 'daily') {
         getDailySong().then((data) => {
-          console.log(data)
           const trackIds = data?.data?.dailySongs
           this.list = trackIds.map((track) => {
             return { id: track.id, source }
@@ -524,11 +529,12 @@ export default class Player {
       }
     })
   }
-  scrobbleTrack(id, source) {
+  async scrobbleTrack(id, source) {
     if (!['playlist', 'album'].includes(source?.type)) {
       return
     }
-    scrobble(id, source?.id)
+    const scrobbleResult = await scrobble(id, source?.id,this.audioManager.duration)
+    console.log(scrobbleResult)
   }
   next() {
     if (this.isPersonalFM) {
@@ -559,13 +565,9 @@ export default class Player {
     } else {
       nextTrack = this.list[0]
     }
-    console.log(cursor)
     this.play(nextTrack.id, nextTrack.source, false)
   }
   previous() {
-    if (this.isPersonalFM || this.isListentogether) {
-      return
-    }
     let cursor = this.getCursor()
     let previousTrack
     if (cursor > 0) {
@@ -575,15 +577,15 @@ export default class Player {
     }
     this.play(previousTrack.id, previousTrack.source, false)
   }
-  execPlay() {
+  execPlay(opt = {}) {
     this.audioManager.play()
-    if (this.isListentogether && this.listentogether.isHost) {
+    if (this.isListentogether && !opt.listentogetherCommandRecieve) {
       this.postPlayCommand('PLAY')
     }
   }
-  execPause() {
+  execPause(opt = {}) {
     this.audioManager.pause()
-    if (this.isListentogether && this.listentogether.isHost) {
+    if (this.isListentogether && !opt.listentogetherCommandRecieve) {
       this.postPlayCommand('PAUSE')
     }
   }
@@ -602,7 +604,7 @@ export default class Player {
   toggleMute() {
     this.audioManager.toggleMute()
   }
-  seek(time = null) {
+  seek(time = null, opt = {}) {
     if (!time) {
       return null
     }
@@ -610,7 +612,7 @@ export default class Player {
       time = this.duration
     }
     this.audioManager.seek(time)
-    if (this.isListentogether && this.listentogether.isHost) {
+    if (this.isListentogether && !opt.listentogetherCommandRecieve) {
       this.postPlayCommand('SEEK')
     }
     return null
@@ -623,6 +625,9 @@ export default class Player {
     }
   }
   changePlaymode(mode) {
+    if (this.isPersonalFM) {
+      return
+    }
     if (!['list', 'random', 'loop'].includes(mode)) {
       return
     }
@@ -634,7 +639,7 @@ export default class Player {
       this.isShuffe = false
     }
     this.updatePlaymode(mode)
-    if (this.isListentogether && this.listentogether.isHost) {
+    if (this.isListentogether) {
       this.postListogetherData()
     }
   }
@@ -655,8 +660,8 @@ export default class Player {
       'app->desktop:musicinfo',
       JSON.stringify(this.currentMusicInfo)
     )
-
-    console.log('传输')
+    //当前播放的信息发给主进程进行保存
+    window.electron.ipcRenderer.send('player:nowplaying', this.currentMusicInfo)
     if (true) {
       this.updateMediaSession(info)
     }
@@ -711,6 +716,7 @@ export default class Player {
     const currentTime = this.audioManager.currentTime //ss
     this.currentTime = currentTime
     window.electron.ipcRenderer.send('app->desktop:timeupdate', currentTime)
+    window.electron.ipcRenderer.send('player:timeupdate', currentTime)
     store.commit('updateAudioState', { key: 'ct', value: currentTime })
   }
   onCanplay() {
@@ -721,19 +727,21 @@ export default class Player {
   onPause() {
     store.commit('updateAudioState', { key: 'state', value: 'pause' })
     window.electron.ipcRenderer.send('app->desktop:pause')
+    window.electron.ipcRenderer.send('player:pause')
   }
   onPlay() {
     store.commit('updateAudioState', { key: 'state', value: 'play' })
     window.electron.ipcRenderer.send('app->desktop:play')
+    window.electron.ipcRenderer.send('player:play')
   }
   onVolumeChange() {
     store.commit('updateAudioState', { key: 'volume', value: this.audioManager.volume })
     window.electron.ipcRenderer.send('app->desktop:volumechange', this.audioManager.volume)
+    window.electron.ipcRenderer.send('player:volumechange')
   }
   async getAudioSourceFromNcm(id) {
     const cache = await this.readAudioFromCache(id, this.quality)
-    if (cache && config.value.enableCache) {
-      console.log('从缓存中读取音频')
+    if (cache) {
       return cache
     } else if (this.isLogin()) {
       const track = await getSongUrl(id, this.quality)
@@ -753,26 +761,22 @@ export default class Player {
       return
     }
     try {
-      const resource = `audio-${id}-${quality}`
-      const blob = await fetch(url).then((res) => res.blob())
-      const buffer = await blob.arrayBuffer()
-      console.log(buffer)
-      // this.audioCacheDB.audioCache.put({ resource, buffer })
-      // console.log('音频缓存成功')
-      console.log(window.api.writeBuffer(resource, config.value.cachePath, buffer))
+      const resource = `audio-${id}-${quality}.cb`
+
+      const cache = await window.electron.ipcRenderer.invoke('tool:downloadFileTo', {
+        url,
+        filepath: config.value.cachePath,
+        filename: resource
+      })
     } catch (error) {}
   }
   async readAudioFromCache(id, quality) {
     const resource = `audio-${id}-${quality}`
-    const readResult = await window.api.readBuffer(resource, config.value.cachePath)
-    try {
-      if (readResult.exists) {
-        const blob = new Blob([readResult.buffer])
-        return URL.createObjectURL(blob)
-      } else {
-        return null
-      }
-    } catch (error) {
+    const filepath = path.join(config.value.cachePath, resource + '.cb')
+    const exist = await window.api.fileExist(filepath)
+    if (exist) {
+      return filepath
+    } else {
       return null
     }
   }
@@ -787,50 +791,94 @@ export default class Player {
     this.currentId = md5
 
     const localSongData = (await localMusic.getSongsDataByMd5([md5]))[0]
-    
-    if(!localSongData) {
+
+    let path, data
+    if (!localSongData) {
+      if (this.quickPlayAudios[md5]) {
+        console.log(this.quickPlayAudios)
+        console.log(this.quickPlayAudios,md5)
+        path = this.quickPlayAudios[md5]?.path
+        data = this.quickPlayAudios[md5]
+      }
+    } else {
+      console.log(localSongData)
+      path = localSongData?.path
+      data = localSongData?.data
+    }
+
+    if (!path || !data) {
       return
     }
-    const { path,data } = localSongData
 
-    const audioBuffer = await window.api.readFileBuffer(path)
-    if(audioBuffer.exists){
-      const blob = new Blob([audioBuffer.buffer])
-      const url = URL.createObjectURL(blob)
-      this.replaceTrack(md5, url, this.autoplay)
+    console.log(data)
+    const exist = await window.api.fileExist(path)
+    if (exist) {
+      this.replaceTrack(md5, path, this.autoplay)
     }
     this.updateNowPlaying(data)
-    const lyric = await localMusic.getLocalLyric(md5)
-    if(lyric){
-        this.lyric = lyric
-        store.commit('updateLyric', this.lyric)
-        localMusic.setLocalLyric(md5, this.lyric)
-        this.sendLyric(this.lyric)
+    if (data?.matched) {
+      getDynamicCover(data?.id).then((data) => {
+        this.updateDynamicCover(data?.data)
+      })
+    } else {
+      this.updateDynamicCover(null)
     }
-    else{
-      if(data?.matched){
+    const lyric = await localMusic.getLocalLyric(md5)
+    if (lyric) {
+      this.lyric = lyric
+      store.commit('updateLyric', this.lyric)
+      localMusic.setLocalLyric(md5, this.lyric)
+      this.sendLyric(this.lyric)
+    } else {
+      if (data?.matched) {
         const lyric = await getLyric(data.id)
         this.lyric = lyric
         store.commit('updateLyric', this.lyric)
         localMusic.setLocalLyric(md5, this.lyric)
         this.sendLyric(this.lyric)
-      }
-      else{
+      } else {
         this.lyric = []
         store.commit('updateLyric', this.lyric)
         localMusic.setLocalLyric(md5, this.lyric)
         this.sendLyric(this.lyric)
       }
     }
-    console.log(path,md5,data)
   }
-  async playLocalList(start,mapListIds,source){
-    this.changePlaylist(mapListIds,source,false)
-    console.log(mapListIds)
-    if(start){
+  async playLocalList(start, mapListIds, source) {
+    this.changePlaylist(mapListIds, source, false)
+    if (start) {
       this.playLocalMusic(start)
     }
   }
+  /**
+   *
+   * @param {Array<FILEPATH>} files
+   */
+  async quickPlayAudioFiles(files) {
+    const details = await localMusic.getLocalMusicMatchedDetial(files)
+    const itemsArray = Object.values(details)
+    for(const d of itemsArray){
+      this.quickPlayAudios[d?.md5] = d
+    }
+    console.log(this.quickPlayAudios)
+    this.playInsertTracks(
+      itemsArray[0].md5,
+      itemsArray.map((i) => {
+        return {
+          id: i.md5,
+          source: {
+            id: Date.now(),
+            type: 'localgroup'
+          }
+        }
+      }),
+      {
+        id: Date.now(),
+        type: 'localgroup'
+      }
+    )
+  }
+
   sendLyric(lyric) {
     window.electron.ipcRenderer.send('app->desktop:lyric', JSON.stringify(lyric))
   }
@@ -911,12 +959,11 @@ export default class Player {
     if (Player.IS_INIT) {
       return
     }
-    this.initMusicSession()
+    this.initMeidaSession()
     this.eventListen()
     this.initAudioEffect()
     this.initIpc()
     this.syncListentogether()
-    console.log('初始化音频播放器')
     Player.IS_INIT = true
   }
   initPersonalFM() {
@@ -931,7 +978,7 @@ export default class Player {
       })
     })
   }
-  initMusicSession() {
+  initMeidaSession() {
     if ('mediaSession' in navigator) {
       navigator.mediaSession.setActionHandler('play', () => {
         this.execPlay()
@@ -980,17 +1027,20 @@ export default class Player {
     })
   }
   initIpc() {
-    window.electron.ipcRenderer.on('app:seek', (e, currentTime) => {
+    window.electron.ipcRenderer.on('player:seek', (e, currentTime) => {
       this.seek(currentTime)
     })
-    window.electron.ipcRenderer.on('app:next', (e) => {
+    window.electron.ipcRenderer.on('player:next', (e) => {
       this.next()
     })
-    window.electron.ipcRenderer.on('app:previous', (e) => {
+    window.electron.ipcRenderer.on('player:previous', (e) => {
       this.previous()
     })
-    window.electron.ipcRenderer.on('app:toggleplay', (e) => {
+    window.electron.ipcRenderer.on('player:toggleplay', (e) => {
       this.playOrPause()
+    })
+    window.electron.ipcRenderer.on('player:playmode', (e, mode) => {
+      this.changePlaymode(mode)
     })
     window.electron.ipcRenderer.on('desktop:ready', (e) => {
       window.electron.ipcRenderer.send(
@@ -1008,7 +1058,7 @@ export default class Player {
   updateMediaSession(info) {
     const meta = {
       title: info?.name,
-      artist: info?.artist.map((a) => a.name).join(','),
+      artist: info?.artist?.map((a) => a.name).join(','),
       album: info?.album?.name,
       artwork: [
         {
@@ -1058,11 +1108,9 @@ export default class Player {
   }
   //api
   async getListDetial(count) {
-    console.log(this.list)
-    let trackIds = this.list.filter(i=>i.source.type !== 'localgroup').map((i) => i.id)
+    let trackIds = this.list.filter((i) => i.source.type !== 'localgroup').map((i) => i.id)
     let cursor = this.getCursor()
     const detials = (await getSongDetial(trackIds))?.songs
-    console.log(trackIds)
     return detials
   }
   async queryPlaylist() {
@@ -1072,36 +1120,53 @@ export default class Player {
 
   //一起听
   async createListentogetherRoom() {
-    const status = await getRoomStatus()
-    console.log(status)
-    if (status.data?.inRoom) {
-      alert('end room?')
-      await this.endListentogetherRoom(status?.data?.roomInfo?.roomId)
-      return
+    const _createRoom = async () => {
+      const createdRoom = await createRoom()
+      if (createdRoom?.code === 200) {
+        this.listentogether.roomDetial = createdRoom?.data?.roomInfo
+        this.listentogether.roomId = this.listentogether.roomDetial?.roomId
+        this.listentogether.creatorId = this.listentogether.roomDetial?.creatorId
+        this.listentogether.isHost = true
+        this.listentogether.isJoined = true
+        store.commit('updateListentogetherRoomDetial', this.listentogether.roomDetial)
+        this.initListentogether(this.listentogether.roomDetial?.roomId)
+      }
     }
-    // const status = await getRoomStatus()
-    // if(status.data?.roomInfo?.roomId){
-    //   console.log('处于一起听房间，无法创建')
-    //   return
-    // }
-    const createdRoom = await createRoom()
-    if (createdRoom?.code === 200) {
-      console.log(createdRoom)
-      this.listentogether.roomDetial = createdRoom?.data?.roomInfo
-      this.listentogether.roomId = this.listentogether.roomDetial?.roomId
-      this.listentogether.creatorId = this.listentogether.roomDetial?.creatorId
-      this.listentogether.isHost = true
-      this.listentogether.isJoined = true
-      store.commit('updateListentogetherRoomDetial', this.listentogether.roomDetial)
-      console.log()
-      this.initListentogether(this.listentogether.roomDetial?.roomId)
-      console.log(
-        '创建成功',
-        this._listentogetherInviteLinkFormatter(
-          this.listentogether.roomId,
-          this.listentogether.creatorId
-        )
+    const status = await getRoomStatus()
+    if (status.data?.inRoom) {
+      const choice = await showConfirmDialog(
+        '当前正在一起听',
+        '您可以选择恢复之前的一起听或者结束后新建',
+        [
+          {
+            label: '结束一起听',
+            act: 'end'
+          },
+          {
+            label: '恢复一起听',
+            act: 'recover',
+            style: 'strong'
+          }
+        ]
       )
+      if (choice === 'canceled') {
+        return
+      } else if (choice === 'recover') {
+        const ishost = status.data?.roomInfo?.creatorId == profile.value.userId
+        this.listentogether.roomDetial = status?.data?.roomInfo
+        this.listentogether.roomId = this.listentogether.roomDetial?.roomId
+        this.listentogether.creatorId = this.listentogether.roomDetial?.creatorId
+        this.listentogether.isHost = ishost
+        this.listentogether.isJoined = true
+        store.commit('updateListentogetherRoomDetial', this.listentogether.roomDetial)
+        this.initListentogether(this.listentogether.roomDetial?.roomId)
+        return
+      } else if (choice === 'end') {
+        await this.endListentogetherRoom(status?.data?.roomInfo?.roomId)
+        await _createRoom()
+      }
+    } else {
+      await _createRoom()
     }
   }
   async joinListentogetherRoom(roomId, creatorId, songId) {
@@ -1120,12 +1185,9 @@ export default class Player {
       }
     }
     const check = await checkRoom(roomId)
-    console.log(check)
     if (check?.data?.status === 'FULL') {
-      console.log('当前已满')
       return
     } else if (check && check?.data?.joinable) {
-      console.log('joinable')
       const accept = await acceptRoom(roomId, creatorId)
       if (accept?.code !== 200) {
         return '加入失败'
@@ -1138,7 +1200,6 @@ export default class Player {
         this.listentogether.hintText = accept?.data?.hintText
         store.commit('updateListentogetherRoomDetial', this.listentogether.roomDetial)
         if (accept?.data?.type === 'ALREADY_IN_ROOM') {
-          console.log('已经在房间了')
         }
         this.initListentogether()
       }
@@ -1146,67 +1207,83 @@ export default class Player {
   }
   async listentogetherDataHandler(isinit) {
     const playlist = await getHostPlaylist(this.listentogether.roomId)
-    console.log(playlist)
-    const command = playlist?.data?.playCommand
-    const commandType = command?.commandType
-    const targetSongId = command?.targetSongId
-    const progress = command?.progress
-    const playlistData = playlist?.data?.playlist
-    const playmode = playlistData?.playMode
-    this.listentogether.playmode = playmode
-    //格式化为Nekoplayer Playlist Format
-    this.normalList = playlistData?.displayList?.result.map((id) => {
-      return {
-        id: id,
-        source: {
-          type: 'listentogether',
-          id: this.listentogether.roomId,
-          lstmode: 'NORMAL'
-        }
-      }
-    })
-    if (playmode === 'RANDOM') {
-      this.randomList = playlistData?.randomList?.result.map((id) => {
+
+    const clientSeq = playlist?.data?.playCommand?.clientSeq
+    const serverSeq = playlist?.data?.playCommand?.serverSeq
+    if (this.listentogetherActionFreeze) {
+      return
+    }
+
+    if (
+      (serverSeq > this.listentogetherServerSeq && clientSeq > this.listentogetherClientSeq) ||
+      isinit
+    ) {
+      this.listentogetherClientSeq = clientSeq
+      this.listentogetherServerSeq = Date.now()
+      const command = playlist?.data?.playCommand
+      const commandType = command?.commandType
+      const targetSongId = command?.targetSongId
+      const progress = command?.progress
+      const playlistData = playlist?.data?.playlist
+      const playmode = playlistData?.playMode
+      this.listentogether.playmode = playmode
+      //格式化为Nekoplayer Playlist Format
+      this.normalList = playlistData?.displayList?.result.map((id) => {
         return {
           id: id,
           source: {
             type: 'listentogether',
             id: this.listentogether.roomId,
-            lstmode: 'RANDOM'
+            lstmode: 'NORMAL'
           }
         }
       })
-    }
-    const isNeedReplace =
-      this._list.map((i) => i.id).join('') !== playlistData?.displayList?.result?.join('')
-    //歌单替换
-    if (playlistData?.replace && isNeedReplace) {
-      console.log('换源力')
-      if (isinit) {
-        this.beforeJoinSaved.list = this._deepClone(this._list)
-        this.beforeJoinSaved.shuffle = this._deepClone(this.shuffledList)
+      if (playmode === 'RANDOM') {
+        this.randomList = playlistData?.randomList?.result.map((id) => {
+          return {
+            id: id,
+            source: {
+              type: 'listentogether',
+              id: this.listentogether.roomId,
+              lstmode: 'RANDOM'
+            }
+          }
+        })
       }
-      this._list = this.normalList
-      playmode === 'RANDOM' && (this.shuffledList = this.randomList)
-    }
-    //跳转播放进度
-    if (isinit) {
-      this.audioManager.seek(parseInt(progress) / 1000)
-    }
-    //指令相应
-    if (commandType === 'PAUSE') {
-      this.execPause()
-    } else if (commandType === 'PLAY') {
-      this.execPlay()
-    } else if (commandType === 'SEEK') {
-      this.audioManager.seek(parseInt(progress) / 1000)
-    }
+      const isNeedReplace =
+        this._list.map((i) => i.id).join('') !== playlistData?.displayList?.result?.join('')
+      //歌单替换
+      if (isNeedReplace || isinit) {
+        if (isinit) {
+          this.beforeJoinSaved.list = this._deepClone(this._list)
+          this.beforeJoinSaved.shuffle = this._deepClone(this.shuffledList)
+        }
+        this._list = this.normalList
+        playmode === 'RANDOM' && (this.shuffledList = this.randomList)
+      }
+      //跳转播放进度
+      if (isinit) {
+        this.seek(parseInt(progress) / 1000)
+      }
+      //指令相应
+      if (commandType === 'PAUSE') {
+        this.execPause({ listentogetherCommandRecieve: true })
+      } else if (commandType === 'PLAY') {
+        this.execPlay({ listentogetherCommandRecieve: true })
+      } else if (commandType === 'SEEK') {
+        this.seek(parseInt(progress) / 1000, { listentogetherCommandRecieve: true })
+      }
+      if (this.listentogether.progress !== progress) {
+        this.seek(parseInt(progress) / 1000, { listentogetherCommandRecieve: true })
+        this.listentogether.progress = progress
+      }
 
-    //播放以及播放判断
-    if (this.listentogether.formerSongId !== targetSongId || isinit) {
-      this.play(targetSongId, this.listentogether.source)
-      this.listentogether.formerSongId = targetSongId
-      console.log('房间曲目改变，播放新曲目')
+      //播放以及播放判断
+      if (this.listentogether.formerSongId !== targetSongId || isinit) {
+        this.playMusicOnNcm(targetSongId, { listogetherCommandReciver: true })
+        // this.play(targetSongId, this.listentogether.source)
+        this.listentogether.formerSongId = targetSongId
+      }
     }
   }
 
@@ -1224,17 +1301,16 @@ export default class Player {
     const isUserJoined =
       status?.data?.roomInfo?.roomUsers?.length > this.listentogether.roomDetial?.roomUsers?.length
 
-    console.log(
-      status?.data?.roomInfo?.roomUsers,
-      this.listentogether.roomDetial?.roomUsers,
-      isUserJoined
-    )
+    // console.log(
+    //   status?.data?.roomInfo?.roomUsers,
+    //   this.listentogether.roomDetial?.roomUsers,
+    //   isUserJoined
+    // )
     this.listentogether.roomDetial = status?.data?.roomInfo
     status?.data?.roomInfo?.roomId && (this.listentogether.roomId = status?.data?.roomInfo?.roomId)
     status?.data?.roomInfo?.creatorId &&
       (this.listentogether.creatorId = status?.data?.roomInfo?.creatorId)
     if (isUserJoined && this.isListentogether && this.listentogether.isHost) {
-      console.log('postseek')
       this.postPlayCommand('SEEK')
       this.postHeartbeat(this.currentId)
     }
@@ -1256,15 +1332,21 @@ export default class Player {
         randomList,
         playmodeMap[this.playmode],
         'REPLACE',
-        this.listentogetherClientSeq++
+        this.listentogetherClientSeq
       )
+
+      clearInterval(this.listentogetherActionFreezeInterval)
+      this.listentogetherActionFreeze = true
+      this.listentogetherActionFreezeInterval = setInterval(() => {
+        this.listentogetherActionFreeze = false
+      }, 1200)
     }
   }
   async postPlayCommand(type) {
     const songId = this.currentId
     const former = this.lastId || -1
-    const playStatus = this.audioManager.status || 'PAUSE'
-    const command = type === 'SEEK' ? 'SEEK' : this.audioManager.status || 'PAUSE'
+    const playStatus = this.audioManager.status || 'PLAY'
+    const command = type ? type : this.audioManager.status
     const progress = Math.floor((this.audioManager.currentTime || 0) * 1000)
     songId &&
       postPlayCommand(
@@ -1274,11 +1356,18 @@ export default class Player {
         command,
         former,
         songId,
-        this.listentogetherClientSeq++
+        this.listentogetherClientSeq
       )
+    if (songId) {
+      clearInterval(this.listentogetherActionFreezeInterval)
+      this.listentogetherActionFreeze = true
+      this.listentogetherActionFreezeInterval = setInterval(() => {
+        this.listentogetherActionFreeze = false
+      }, 1200)
+    }
   }
   async postHeartbeat(songId) {
-    const playStatus = this.audioManager.status || 'PAUSE'
+    const playStatus = this.audioManager.status || 'PLAY'
     const progress = Math.floor((this.audioManager.currentTime || 0) * 1000)
     if (this.listentogether.roomId && songId) {
       postRoomHeartbeat(this.listentogether.roomId, songId, playStatus, progress)
@@ -1300,11 +1389,13 @@ export default class Player {
       this.postListogetherData()
       this.postPlayCommand(null)
       this.postHeartbeat(this.currentId)
+      this.listentogetherDataHandler(true)
       if (this.listentogetherPollingInterval) {
         clearInterval(this.listentogetherPollingInterval)
         this.listentogetherPollingInterval = null
       }
       this.listentogetherPollingInterval = setInterval(() => {
+        this.listentogetherDataHandler(false)
         this.listentogetherRoomStatusHandler()
       }, 1000)
     } else {
@@ -1347,6 +1438,10 @@ export default class Player {
         targetSongId: 0,
         lastProgress: 0
       }
+      this.listentogetherClientSeq = 1
+      this.listentogetherServerSeq = Date.now()
+      this.listentogetherActionFreeze = false
+      this.listentogetherActionFreezeInterval = null
     }
   }
   _listentogetherInviteLinkFormatter(roomId, creatorId, songId = this.currentId, motd = '') {
@@ -1354,3 +1449,57 @@ export default class Player {
   }
   async syncListentogether() {}
 }
+/**
+ * 
+ __   __  _______  ___      ___      _______ 
+|  | |  ||       ||   |    |   |    |       |
+|  |_|  ||    ___||   |    |   |    |   _   |
+|       ||   |___ |   |    |   |    |  | |  |
+|       ||    ___||   |___ |   |___ |  |_|  |
+|   _   ||   |___ |       ||       ||       |
+|__| |__||_______||_______||_______||_______|
+
+⣿⣿⣿⣿⣿⣿⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣤⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⡀⠀⠀⠀⠀⠀⠀⠀⠙⢿⣿⣿⣿⣿⣿⣿⣿⣶⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⣿⣿⣿⣿⣿⣿⠇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣤⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣦⠀⠀⠀⠀⠀⠀⠀⠀⠻⣿⣿⣿⣿⣿⣿⣿⣿⣦⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⣿⣿⣿⣿⣿⣿⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣠⣶⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⠀⠀⠀⠀⠀⠀⠀⠀⠈⠻⣿⣿⣿⣿⣿⣿⣿⣧⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⣿⣿⣿⣿⣿⣿⣷⣄⠀⠀⠀⠀⠀⠀⠀⠀⣠⣴⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣏⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⡀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢿⣿⣿⣿⣿⣿⣿⢧⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠿⠟⠿⢿⣿⣿⣯⠓⠀⠀⠀⠀⠀⢀⣠⣾⣿⡿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡏⣽⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢿⣿⣿⣿⡿⡎⢧⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠡⠄⠈⠁⠀⠀⠀⣠⣶⣿⣿⣿⣯⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠻⡍⠿⢧⡘⣧⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⢀⣠⣴⣿⣿⡿⠟⠉⣰⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⠂⠸⣧⣼⣧⡀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⢠⠴⠾⠟⠛⠉⠉⠀⠀⢀⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣧⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠀⣤⢰⣾⡷⡄⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡆⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⣿⣿⣷⢟⡄⢀⣀⠀⠀
+⠂⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢰⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣯⣿⣿⣿⠸⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⣿⣿⢯⠟⢸⣿⣷⣦
+⠆⠀⠀⢀⣴⣾⣷⠀⠀⠀⢠⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠟⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡜⣿⣿⡆⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣧⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⣿⡞⢀⣿⣿⣿⣿
+⡖⢀⣴⣿⣿⡿⠃⠀⠀⢠⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⢹⣿⣿⢠⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣧⠘⣿⣧⢸⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣧⣤⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⢠⣾⣿⣿⣿⣿
+⣻⣿⣿⣿⠏⠀⠀⠀⢀⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡿⢁⣿⣿⣿⢸⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣇⠸⣿⣏⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡛⠤⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⢉⣿⣿⣿⣿
+⣿⣿⣿⡏⠀⠀⠀⠀⣼⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡏⣿⣿⣿⣿⡿⢁⣿⣿⣿⣿⢸⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡆⠹⣿⣿⣻⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣶⣄⣀⣀⣀⣀⠀⠀⠀⠀⠀⠀⠀⠀⢻⣾⣿⣿
+⣿⣿⡿⠿⠿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡇⣿⣿⣿⣿⠃⣼⣿⣿⣿⣿⢸⣿⣿⣿⣿⣿⣿⣿⣿⣿⢹⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡀⠛⣿⣿⣽⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣧⠉⠉⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⢻⣿⣿
+⣿⡿⠀⠀⠀⠀⢀⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠿⣿⣿⣿⠇⣸⣿⣿⣿⣿⣿⣾⣿⣿⣿⣿⣿⣿⣿⣿⡇⠈⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⡀⢻⣿⣿⣎⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣧⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⣿⣿
+⣿⠁⠀⠀⠀⠀⣸⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠀⣿⣿⡟⣰⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠃⣶⠹⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡿⣿⣷⡄⢻⣿⣿⣿⣟⣿⣛⣿⣟⡿⢿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣆⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠈
+⣿⣤⠀⠀⠀⠀⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠀⣿⣿⢠⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠀⣿⡆⢹⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣇⠰⣯⠷⣌⣿⣿⣿⣿⣿⣿⣾⣿⣿⣎⢻⣿⣿⣿⡛⢿⣯⠻⣿⣿⣿⣆⠀⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⣿⣿⣿⣶⣶⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠀⢹⠃⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⢸⣿⣿⡀⢻⣿⣿⣿⣿⣿⣿⣿⣿⣿⡟⢿⣿⡦⠻⣷⣭⣎⣻⣿⣿⣿⣿⣿⣿⣿⣿⣿⣾⣻⣿⣿⡆⠉⠁⠘⢿⣿⣿⡆⢳⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡆⢘⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⢸⣿⣿⣷⡌⢿⣿⣿⣿⣽⣿⣞⢿⣿⣿⣦⠙⢿⣦⡘⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⣴⣤⡈⢿⣿⣿⠈⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠿⠿⠿⠿⠿⠿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣇⢸⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣾⣿⣿⣿⣿⣌⣿⣿⡏⢹⣿⣿⣧⣹⢞⣿⣷⣦⣹⣷⡜⢿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡈⢻⣿⡇⣿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⣤⣀⣀⣀⣀⣀⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⢸⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⣼⣿⣿⣿⣿⣿⣿⣿⡿⠟⠛⠿⠦⠀⠀⠈⠻⠉⢿⢿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣧⠀⢿⣷⣿⡆⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡿⢟⡃⢀⣠⣴⣶⣶⣶⣶⣶⣶⣦⣴⣤⣾⣿⣿⣿⣿⠸⣿⣿⢻⣿⣿⣿⣿⡆⢸⣿⣿⣿⡀⠀⠀⠀⠀⠀⠀⠀⠀
+⣿⣿⣿⣿⡟⣱⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠟⠛⠻⠀⠙⠛⠀⠀⠈⠉⠙⠻⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⢸⣿⠏⣾⣿⣿⣿⣿⣿⣾⣿⣿⣿⣷⠀⠀⠀⠀⠀⠀⠀⠀
+⣿⣿⡿⢋⣼⣿⣿⣿⡟⣹⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣟⢿⣿⣿⣷⢔⣠⣶⣾⣿⣿⣿⣿⣿⣿⣶⣦⣼⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡟⢋⠉⠉⠉⠉⠉⠉⠉⠁⢼⢏⣼⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠇⡀⠀⠀⠀⠀⠀⠀
+⡿⠋⣠⣾⣿⣿⣿⡿⣻⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡿⠁⠈⠉⠀⠀⠀⠀⠀⠀⠀⣀⡀⡾⢉⣼⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⢠⡇⠀⠀⠀⠀⠀⠀
+⣠⣼⣷⣶⣿⣿⡟⣵⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡇⣈⠻⣿⣿⣿⡿⠿⠿⠿⠿⢿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣦⣤⣤⣤⣤⣤⣴⣶⣶⣿⠿⢁⣤⣾⡿⠿⣯⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡇⠀⠀⠀⠀⠀⠀
+⣿⣿⣿⣿⣿⡟⣰⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⢿⣿⣿⣿⠠⡛⠀⠿⠟⠁⠀⠀⠀⠀⠀⢀⣸⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣋⡤⠰⣛⣏⣠⣼⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣯⠇⠀⠀⠀⠀⠀⠀
+⣿⣿⣿⠿⠋⢠⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡎⣿⣿⣿⠀⣦⡀⠀⠀⠀⢀⣀⣤⣤⣶⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠟⠹⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠀⠀⠀⠀⠀⠀⠀
+⠿⠋⠁⠄⠀⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣧⢹⣿⡇⠀⡟⠙⠖⠲⠂⠘⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⣾⡯⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡿⠟⢁⣠⣴⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠀⠀⠀⠀⠀⠀⠀
+⠀⠆⠈⠀⣼⣿⣿⣿⣿⣿⢿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠀⢿⡇⢸⠀⠀⠀⠀⠀⠀⠘⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣟⠟⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣧⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⣶⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡟⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⢠⣿⣿⣿⣿⣿⣿⠘⣿⣿⣿⣿⣿⣿⣿⣿⣿⣇⠈⠃⡌⠀⠀⠀⠀⠀⠀⠀⠈⢻⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣦⡙⠿⣿⣿⣿⣿⣿⣿⣿⣯⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡿⣿⣿⣿⣿⠃⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⣼⣿⣿⣿⣿⣿⠁⠀⢿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡆⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠻⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠟⢋⣿⡏⠙⠆⠙⠛⠿⢿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠇⢻⣿⣿⡏⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⣿⣿⣿⣿⣿⡇⠀⠀⠈⢿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡀⠀⠀⢀⣤⡄⠀⠀⠀⠀⠀⠀⠀⠈⠙⠻⠿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠿⢛⣩⣴⣾⣿⣿⡇⠀⣤⣤⠆⣀⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡿⠀⣾⣿⡟⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⣠⣷⢸⣿⣿⣿⣿⣿⡇⠀⠀⠀⠘⣿⣿⣿⣿⣿⣿⣿⡇⠛⠛⢆⡀⠀⠻⠅⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠉⠛⠻⠿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠿⠟⣉⣥⣶⣿⣿⣿⣿⣿⣿⣇⠀⠃⣀⣴⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠿⢋⣿⠃⠀⣿⡟⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⣿⣿⡾⣿⣿⡏⣿⣿⠁⠀⠀⠀⠀⠘⣿⡏⢮⠻⢿⣿⣿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠙⠛⠿⢿⡿⢟⣛⣯⣴⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣤⣿⣿⣿⣿⣿⣿⣿⣿⣿⠿⠛⠋⢁⣴⣿⡏⠀⣼⠋⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⣿⣿⡇⣿⣿⢰⣿⡟⠀⠀⠀⣄⠀⠀⠘⢷⡄⠀⠀⠙⢿⣇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠿⠛⣹⣦⣍⣉⠉⠉⠉⠉⠁⠀⠀⣶⡿⣿⣿⡟⠀⠀⠀⠀⠀⠀⠀⠀⢀⣤⠀⠀⠀⣀⣀
+⣿⣿⣿⣿⣷⣾⣿⠇⠀⢠⣾⣿⣤⡀⠀⠀⠹⣶⣄⠀⠀⠉⠃⠀⠀⠀⠈⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢹⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡿⠟⠋⢁⣰⣾⣯⣿⣿⣿⣿⡆⠀⠀⠀⠀⠀⠈⢱⣿⠏⠀⠀⠀⠀⠀⠀⠀⣀⣴⡿⠃⠀⢀⣴⣿⣿
+⣿⣿⣿⣿⡇⠛⠃⠀⠀⠞⠛⢿⣿⣧⠆⠀⠀⠀⠀⠀⢀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣦⠀⣿⣿⣿⣿⣿⣿⣿⠟⠛⢁⣠⣴⣾⣿⣿⣿⣿⣿⣿⣿⣿⣷⠀⠀⠀⠀⠀⠀⠉⠁⠀⠀⠀⠀⠀⢀⣦⡀⠈⠉⠀⠀⠘⠛⢻⣿⣿
+⣿⠿⠛⣋⣤⡤⠀⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢤⠈⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⣾⣿⠀⠀⠀⢀⣶⠀⠀⠀⠀⠀⡀⠘⣯⣴⣿⣿⡿⣿⣿⣿⣶⣶⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡿⠂⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠉⠁⠀⠀⠀⠀⠀⠀⠸⣿⣿
+⣤⣶⣿⣿⠏⠁⠂⢀⣀⣤⣶⡆⠀⠀⠀⠐⠊⣁⣤⡀⠀⠀⠀⠀⠀⣠⡖⠀⠀⠀⠀⠀⠀⠀⠀⠰⠿⠿⠿⠀⠀⠀⢀⣤⣖⢀⣀⣀⣴⣷⠀⠹⡿⢏⣹⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣤⣤⣀⣀⣠⣄⣤⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢻⣿
+⣿⣿⣿⡏⣠⣴⣾⣿⣿⡿⠋⠀⠀⣀⣤⣶⣿⠿⠋⠀⠀⠀⣀⣴⣿⣿⡅⠀⠀⠀⠀⠀⠀⠀⠀⠀⢰⣶⣾⣿⣿⣶⡿⠃⠙⠛⠻⠿⠿⠸⠒⢀⣰⠈⠑⠿⠿⠿⠛⠛⠛⠉⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠖⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⣿
+⣿⣿⣿⣿⣿⣿⣿⣿⣿⡇⢀⣤⣾⡿⠟⣋⣡⣤⣠⣤⣶⣿⣿⣿⣿⣿⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⣾⣿⣿⣿⣿⣿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠀⠀⠐⠀⠀⠀⠀⠀⠀⠀⡀⣹⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠛⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣾⣿
+ */

@@ -1,4 +1,4 @@
-import { contextBridge, dialog, ipcRenderer } from 'electron'
+import { contextBridge, dialog, ipcRenderer, webFrame } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 
 const api = {
@@ -19,6 +19,9 @@ const api = {
   readFileBuffer:(file)=>ipcRenderer.invoke('file:readFileBuffer',file),
   dialogSaveFile:(opt)=>ipcRenderer.invoke('dialog:saveFile',opt),
   writeFile:(file,buffer)=>ipcRenderer.invoke('file:writeFile',file,buffer),
+  fileExists:(files)=>ipcRenderer.invoke("file:exists",files),
+  fileExist:(file)=>ipcRenderer.invoke("file:exist",file),
+  readFileStream:(path)=>ipcRenderer.invoke("file:readFileStream",path)
 }
 
 
@@ -32,4 +35,5 @@ if (process.contextIsolated) {
 } else {
   window.electron = electronAPI
   window.api = api
+  window.webFrame = webFrame
 }

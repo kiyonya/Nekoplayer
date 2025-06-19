@@ -1,5 +1,7 @@
+import { generateSimilarColors } from '@/utils/color'
 import ColorThief from 'colorthief'
-
+let lastCoverSrc = null
+let lastColorSave = []
 export class LyricController {
   constructor(lyricContainer) {
     this.translate = 0
@@ -12,7 +14,7 @@ export class LyricController {
     this.threehold = 10
     window.addEventListener('resize', this.resize.bind(this))
   }
-  scroll(index, dir, skip = false, sublyric = false,et = 0) {
+  scroll(index, dir, skip = false, sublyric = false, et = 0) {
     index = index + 1
     const items = Array.from(this.lyricContainer.children)
     if (index > items.length - 1) {
@@ -72,7 +74,7 @@ export class LyricController {
       if (dir === 0) {
         delay = 0
       }
-      after[i].style.transform = `translateY(-${this.translate +et}px)`
+      after[i].style.transform = `translateY(-${this.translate + et}px)`
       if (delay && !this.isLocating) {
         after[i].style.transition = `${delay}s cubic-bezier(.33,0,.22,1)`
       }
@@ -119,7 +121,7 @@ export class LyricController {
   resize() {
     const items = Array.from(this.lyricContainer.children)
     this.translate = this.getOffset(items[this.index || 0])
-    this.scroll(this.index-1 <= 0 ? 0 : this.index-1, 0, true)
+    this.scroll(this.index - 1 <= 0 ? 0 : this.index - 1, 0, true)
   }
   unmount() {
     window.removeEventListener('resize', this.resize.bind(this))
@@ -229,87 +231,128 @@ export function colorDeriveFromImg(img, count = 10, dya = 2) {
   }
 }
 export class DynamicBackground {
-  constructor(cavans, imgElement) {
-    this.img = imgElement
-    this.cvs = cavans
-    this.cvs.width = window.innerWidth * devicePixelRatio
-    this.cvs.height = window.innerHeight * devicePixelRatio
-    this.ctx = this.cvs.getContext('2d')
-    this.circles = []
-    this.colors = []
-    this.img.addEventListener('load', this.getColors.bind(this))
-    window.addEventListener('resize', this.resize.bind(this))
-    this.candraw = false
-    this.exit = false
-    this.animate()
+  constructor(canvas) {
+    this.cvs = canvas;
+    this.cvs.width = window.innerWidth * devicePixelRatio;
+    this.cvs.height = window.innerHeight * devicePixelRatio;
+    this.ctx = this.cvs.getContext('2d');
+    
+    // 离屏Canvas
+    this.offscreenCanvas = document.createElement('canvas');
+    this.offscreenCanvas.width = this.cvs.width;
+    this.offscreenCanvas.height = this.cvs.height;
+    this.offscreenCtx = this.offscreenCanvas.getContext('2d');
+    
+    this.circles = [];
+    this.colors = lastColorSave || [];
+    this.animationId = null;
+    this.lastFrameTime = 0;
+    this.candraw = false;
+    this.exit = false;
+    this.resizeHandler = this._debounce(this.resize.bind(this), 200);
+    window.addEventListener('resize', this.resizeHandler);
   }
   start() {
-    this.candraw = true
+    this.candraw = true;
+    this.animate();
   }
   pause() {
-    this.candraw = false
+    this.candraw = false;
   }
   unmount() {
-    this.exit = true
-    this.img.removeEventListener('load', this.getColors.bind(this))
-    window.removeEventListener('resize', this.resize.bind(this))
-    this.candraw = false
+    this.exit = true;
+    cancelAnimationFrame(this.animationId);
+    window.removeEventListener('resize', this.resizeHandler);
+    this.candraw = false;
   }
-  async getColors() {
-    const cf = new ColorThief()
-    this.colors = (await cf.getPalette(this.img)).slice(0, 7)
-    this.initCircles()
+
+  async setColors(color) {
+    console.log(color)
+    this.colors = generateSimilarColors(color,7,5);
+    await this.initCircles();
   }
-  initCircles() {
-    let d = 10000 * 0.5
-    this.circles = []
-    let colors = this.colors.map((rgb) => {
-      return `rgb(${rgb})`
-    })
-    for (let color of colors) {
-      let r = window.innerWidth / 4
-      let x = this._getRandom(r, this.cvs.width - r)
-      let y = this._getRandom(r, this.cvs.height - r)
-      let dx = this._getRandom(window.innerWidth / -d, window.innerWidth / d)
-      let dy = this._getRandom(window.innerWidth / -d, window.innerWidth / d)
-      this.circles.push({ x, y, dx, dy, r, color })
+
+  async initCircles() {
+    let d = 500;
+    this.circles = [];
+    let colors = this.colors.map((rgb) => `rgb(${rgb})`);
+    
+    // 分批创建圆圈
+    const batchSize = 2;
+    for (let i = 0; i < colors.length; i += batchSize) {
+      await new Promise(resolve => {
+        requestIdleCallback((idle) => {
+          for (let j = 0; j < batchSize && i + j < colors.length; j++) {
+            let r = window.innerWidth / 4;
+            let x = this._getRandom(r, this.cvs.width - r);
+            let y = this._getRandom(r, this.cvs.height - r);
+            let dx = this._getRandom(window.innerWidth / -d, window.innerWidth / d);
+            let dy = this._getRandom(window.innerWidth / -d, window.innerWidth / d);
+            this.circles.push({ x, y, dx, dy, r, color: colors[i + j] });
+          }
+          resolve();
+        });
+      });
     }
   }
+
   animate() {
-    if (this.exit) {
-      return
+    if (this.exit) return;
+    
+    this.animationId = requestAnimationFrame(this.animate.bind(this));
+    
+    if (!this.candraw) return;
+    // 控制帧率
+    const now = performance.now();
+    if (now - this.lastFrameTime < 48) return; 
+    this.lastFrameTime = now;
+    
+    // 使用离屏Canvas绘制
+    this.offscreenCtx.clearRect(0, 0, this.cvs.width, this.cvs.height);
+    
+    for (const c of this.circles) {
+      // 边界检查
+      if (c.x + c.r > this.cvs.width || c.x - c.r < 0) c.dx = -c.dx;
+      if (c.y + c.r > this.cvs.height || c.y - c.r < 0) c.dy = -c.dy;
+      
+      // 更新位置
+      c.x += c.dx;
+      c.y += c.dy;
+      
+      // 绘制到离屏Canvas
+      this.offscreenCtx.beginPath();
+      this.offscreenCtx.arc(c.x, c.y, c.r, 0, Math.PI * 2);
+      this.offscreenCtx.fillStyle = c.color;
+      this.offscreenCtx.fill();
     }
-    requestAnimationFrame(this.animate.bind(this))
-    if (!this.candraw) {
-      return
-    }
-    this.ctx.clearRect(0, 0, this.cvs.width, this.cvs.height)
-    this.circles.forEach((c) => {
-      if (c.x + c.r > this.cvs.width || c.x - c.r < 0) {
-        c.dx = -c.dx
-      }
-      if (c.y + c.y > this.cvs.height || c.y - c.r < 0) {
-        c.dy = -c.dy
-      }
-      c.x += c.dx
-      c.y += c.dy
-      this.draw(c)
-    })
+    
+    // 一次性绘制到主Canvas
+    this.ctx.clearRect(0, 0, this.cvs.width, this.cvs.height);
+    this.ctx.drawImage(this.offscreenCanvas, 0, 0);
   }
-  draw(circle) {
-    this.ctx.beginPath()
-    this.ctx.arc(circle.x, circle.y, circle.r, 0, Math.PI * 2, false)
-    this.ctx.fillStyle = circle.color
-    this.ctx.fill()
-    this.ctx.closePath()
-  }
+
   resize() {
-    this.cvs.width = window.innerWidth * 1.5
-    this.cvs.height = window.innerHeight * 1.5
-    this.initCircles()
+    this.cvs.width = window.innerWidth * 1.5;
+    this.cvs.height = window.innerHeight * 1.5;
+    this.offscreenCanvas.width = this.cvs.width;
+    this.offscreenCanvas.height = this.cvs.height;
+    this.initCircles();
   }
+
   _getRandom(min, max) {
-    return Math.random() * (max - min) + min
+    return Math.random() * (max - min) + min;
+  }
+
+  _debounce(func, wait) {
+    let timeout;
+    return function() {
+      const context = this;
+      const args = arguments;
+      clearTimeout(timeout);
+      timeout = setTimeout(() => {
+        func.apply(context, args);
+      }, wait);
+    };
   }
 }
 export class AudioWaveDrawer {
@@ -326,28 +369,28 @@ export class AudioWaveDrawer {
     const { width, height } = this.cvs
     this.ctx.clearRect(0, 0, width, height)
     const len = dataArray.length
-    const barWidth = (width / len)
+    const barWidth = width / len
     this.ctx.fillStyle = '#fff'
     for (let i = 0; i < len; i++) {
       const data = dataArray[i]
-      const barHeight = Math.max((data / 255) * height,barWidth)
+      const barHeight = Math.max((data / 255) * height, barWidth)
       const x = i * barWidth
       const y = height - barHeight
-      this.drawRoundedRect(x,y,barWidth * 0.5,barHeight,barWidth / 2)
+      this.drawRoundedRect(x, y, barWidth * 0.5, barHeight, barWidth / 2)
     }
   }
   drawRoundedRect(x, y, width, height, radius) {
-    this.ctx.beginPath();
-    this.ctx.moveTo(x + radius, y);
-    this.ctx.lineTo(x + width - radius, y);
-    this.ctx.arcTo(x + width, y, x + width, y + radius, radius);
-    this.ctx.lineTo(x + width, y + height - radius);
-    this.ctx.arcTo(x + width, y + height, x + width - radius, y + height, radius);
-    this.ctx.lineTo(x + radius, y + height);
-    this.ctx.arcTo(x, y + height, x, y + height - radius, radius);
-    this.ctx.lineTo(x, y + radius);
-    this.ctx.arcTo(x, y, x + radius, y, radius);
-    this.ctx.closePath();
-    this.ctx.fill(); 
+    this.ctx.beginPath()
+    this.ctx.moveTo(x + radius, y)
+    this.ctx.lineTo(x + width - radius, y)
+    this.ctx.arcTo(x + width, y, x + width, y + radius, radius)
+    this.ctx.lineTo(x + width, y + height - radius)
+    this.ctx.arcTo(x + width, y + height, x + width - radius, y + height, radius)
+    this.ctx.lineTo(x + radius, y + height)
+    this.ctx.arcTo(x, y + height, x, y + height - radius, radius)
+    this.ctx.lineTo(x, y + radius)
+    this.ctx.arcTo(x, y, x + radius, y, radius)
+    this.ctx.closePath()
+    this.ctx.fill()
   }
 }

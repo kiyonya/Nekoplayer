@@ -21,7 +21,8 @@ export default {
     backgroundImageSaturate:1,
     backgroundImageScale:1,
     bloomColor:undefined,
-    font:'misans'
+    font:'misans',
+    
   },
   profile:{},
   loginStatus:parseInt(localStorage.getItem('loginStatus') || 1),

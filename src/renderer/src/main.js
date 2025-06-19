@@ -2,7 +2,6 @@ import './assets/main.css'
 import './assets/theme/style/default_theme.css'
 import { createApp, watch } from 'vue'
 import App from './windows/App.vue'
-import Wallpaper from './windows/wallpaper/Wallpaper.vue'
 import router from './router'
 import i18n from './i18n'
 import * as theme from './utils/theme'
@@ -12,29 +11,21 @@ import { login, logout } from './api/auth'
 import { computed } from 'vue'
 import saveData from './store/save'
 import { useTheme } from './lib/theme'
-import { ShortcutHandler } from './utils/shortcutHandler'
 import { startExtension } from './lib/extension'
-import { FileDownloader } from './utils/downloader'
 import Player from './lib/player/player'
 import { ob } from './utils/libs'
-import IntersectionAPI from './lib/intersection'
-import { getCookie } from './api/cookie'
-import { getUserLikes, getUserPlaylist } from './api/user'
-import { initFileCache } from './lib/cache/cacheAudio'
+import { getUserLikes} from './api/user'
 import { showSideNotification } from './components/notification/use_notification'
 import DesktopPlayer from './windows/DesktopPlayer.vue'
 import { LocalMusic } from './lib/player/local'
 import Toolkit from './lib/player/toolkit'
+import path from 'path-browserify'
+import { registeAppHotkey } from './lib/hotkey'
+
 const player = new Player()
 const localMusic = new LocalMusic()
 const toolkit = new Toolkit()
-//player.joinListentogetherRoom('c127d5c5a62167ae32bd52cebc1b7c6a_1742606860','1438117139','1824982177')
-
-
-
-export { player,localMusic ,toolkit}
-const fs = require('fs')
-
+export { player, localMusic, toolkit }
 const loginStatus = computed({
   get: () => store.state.loginStatus,
   set: (val) => {
@@ -83,7 +74,6 @@ const isLogin = computed({
  * 发送退出指令到主进程
  *
  */
-
 function useApp() {
   const app = createApp(App)
   app.config.globalProperties.$theme = theme
@@ -95,16 +85,9 @@ function useApp() {
   matchDeviceSize()
   window.addEventListener('resize', matchDeviceSize)
   window.os = getUserOsType()
-  //启用扩展
   startExtension()
-  //获取应用信息
-  // window.api.queryAppInfo().then((info) => {
-  //   store.commit('setAppInfo', info)
-  //   console.table(info)
-  //   //初始化缓存区
-  //   initFileCache()
-  // })
   useTheme()
+  registeAppHotkey()
   temp.online.value = navigator.onLine
   window.addEventListener('online', () => {
     temp.online.value = true
@@ -145,12 +128,6 @@ function useApp() {
     close()
   })
 
-  //router.push({name:'Recommend'})
-
-  //监听快捷键
-  new ShortcutHandler(300).listen(window, matchFunc)
-  //设置下载器
-
   window.unmountApp = () => {
     app.unmount()
   }
@@ -169,18 +146,17 @@ function useApp() {
     app.unmount()
   }
 }
-function useDesktop(){
+function useDesktop() {
   const mountel = document.createElement('div')
   document.body.appendChild(mountel)
   const app = createApp(DesktopPlayer)
   app.mount(mountel)
 }
-function GUIDE(){
+function GUIDE() {
   const hash = location.hash
-  if(hash === '#/desktopplayer'){
+  if (hash === '#/desktopplayer') {
     useDesktop()
-  }
-  else{
+  } else {
     useApp()
   }
 }
@@ -191,39 +167,6 @@ window.opendir = async () => {
   const path = await window.api.openDir()
   return path
 }
-
-function matchFunc(keys) {
-  const k = keys.sort()
-  for (let i in shortcut.value) {
-    let stk = shortcut.value[i].app
-
-    const sk = Array.isArray(stk) ? stk.sort() : [stk]
-    if (sk.join('+') === k.join('+')) {
-      matched(i)
-    }
-  }
-
-  function matched(name) {
-    console.log(name)
-    switch (name) {
-      case 'previous':
-        player.previous()
-        break
-      case 'next':
-        player.next()
-        break
-      case 'playAndPause':
-        player.playOrPause()
-    }
-  }
-}
-
-function useWaveDesktop() {
-  const waveDesktop = createApp(Wallpaper)
-  waveDesktop.use(store)
-  waveDesktop.mount('#app')
-}
-
 function matchDeviceSize() {
   const match = window.matchMedia('(min-width: 1301px)')
   if (match.matches) {
@@ -231,12 +174,6 @@ function matchDeviceSize() {
   } else {
     deviceScreenSize.value = 0
   }
-}
-function loadGlobalResource(uid) {
-  getUserPlaylist(uid).then((data) => {
-    store.commit('updateUserPlaylist', data)
-  })
-  getUserLikes(uid).then((data) => {})
 }
 export function getViewScroll(key) {
   return viewScrollY.value[key] || 0
@@ -246,32 +183,60 @@ export function resetApp() {
   logout()
   location.reload()
 }
-
 watch(isLogin, () => {
   if (isLogin.value) {
     player.initPersonalFM()
   }
 })
 
-
 GUIDE()
 
-function getUserOsType(){
-  const userAgent = navigator.userAgent.toLowerCase();
+function getUserOsType() {
+  const userAgent = navigator.userAgent.toLowerCase()
   if (/android/.test(userAgent)) {
-    return 'android';
+    return 'android'
   }
   if (/iphone|ipad|ipod/.test(userAgent)) {
-    return 'iphone';
+    return 'iphone'
   }
   if (/linux/.test(userAgent)) {
-    return 'linux';
+    return 'linux'
   }
   if (/macintosh|mac os x/.test(userAgent)) {
-    return 'pc';
+    return 'pc'
   }
   if (/windows/.test(userAgent)) {
-    return 'pc';
+    return 'pc'
   }
-  return 'pc';
+  return 'pc'
 }
+
+document.addEventListener('dragover', (e) => {
+  e.preventDefault()
+  e.stopPropagation()
+  document.body.style.cursor = 'pointer'
+})
+
+document.addEventListener('dragleave', (e) => {
+  e.preventDefault()
+  e.stopPropagation()
+  document.body.style.cursor = 'auto'
+})
+
+document.addEventListener('drop', (e) => {
+  e.preventDefault()
+  e.stopPropagation()
+  document.body.style.cursor = 'auto'
+ let files = e.dataTransfer.files
+  if (files.length <= 0) {
+    return
+  }
+  const paths = Array.from(files).map(i=>i.path)
+  if(paths.every(i=>[".flac",".mp3",".wav"].includes(path.extname(i)))){
+    player.quickPlayAudioFiles(paths)
+  }
+  else if([".jpg",".png",".jpeg",".webp",".tif"].includes(path.extname(paths[0]))){
+    store.commit('updateTheme', { key: "backgroundMode", value: "image" })
+    store.commit('updateTheme', { key: "backgroundImage", value: paths[0].replace(/\\/g, '/') })
+  }
+})
