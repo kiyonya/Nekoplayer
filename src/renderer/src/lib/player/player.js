@@ -1069,6 +1069,7 @@ export default class Player {
         this.audioManager.biquadFilterGroup.disable()
       }
     })
+    
   }
   initIpc() {
     window.electron.ipcRenderer.on('player:playsong', (e, id,source) => {
