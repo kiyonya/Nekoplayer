@@ -28,6 +28,7 @@ import { Icon } from '@iconify/vue';
   display: flex;
   flex-direction: column;
   color: var(--text-o-1);
+  backdrop-filter: blur(4px);
 }
 .program-card:hover .blur {
   bottom: -0.6rem;

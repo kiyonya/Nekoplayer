@@ -26,26 +26,7 @@ export async function getHQPlaylist(cat = "", limit = 20, before) {
   return data;
 }
 
-export async function getPlaylistCatlist() {
-  const data = await request({
-    url: `/playlist/catlist`,
-    method: "post",
-    body: {
-      cookie: cookie,
-    },
-  });
-  const cats = {}
-  for(let key in data.categories){
-    cats[key] = {
-        cat:data.categories[key],
-        sub:[]
-    }
-  }
-  for(let sub of data.sub){
-    cats[sub.category].sub.push(sub)
-  }
-  return cats;
-}
+
 
 export async function getToplist() {
   const data = await request({

@@ -7,11 +7,23 @@ const router = createRouter({
       path: '/',
       redirect: '/recommend'
     },
-    { name: 'Recommend', path: '/recommend', component: () => import('../views/recommend/Recommend.vue') },
+    { name: 'Recommend', path: '/recommend', component: () => import('../views/Recommend.vue') },
     {
       name: 'Playlist',
       path: '/playlist/:id',
       component: () => import('../views/Playlist/Playlist.vue'),
+      props: true,
+    },
+    {
+      name: 'PlaylistSquare',
+      path: '/playlistsquare',
+      component: () => import('../views/PlaylistSquare.vue'),
+      props: true,
+    },
+    {
+      name: 'PlaylistCategory',
+      path: '/playlistcategory/:cat',
+      component: () => import('../views/PlaylistCategory.vue'),
       props: true,
     },
     {
@@ -44,13 +56,15 @@ const router = createRouter({
     },
     {
       name: 'Search',
-      path: '/search',
+      path: '/search/:key',
       component: () => import('../views/Search.vue'),
       props: true
     },
     {
-      name: 'SearchDetial',
-      path: ''
+      name: 'SearchDetail',
+      path: '/searchdetail/:type/:key',
+      component:()=>import("../views/SearchDetail.vue"),
+      
     },
     {
       name: 'Discover',
@@ -95,9 +109,9 @@ const router = createRouter({
       props: true
     },
     {
-      name:"Dj",
-      path:'/dj',
-      component:()=>import('../views/Dj.vue')
+      name:"Radio",
+      path:'/radio',
+      component:()=>import('../views/Radio.vue')
     },
     {
       name:"ArtistWorks",
@@ -114,6 +128,11 @@ const router = createRouter({
       component:()=>import('../views/Miner.vue'),
     },
     {
+      name:"Transfer",
+      path:'/transfer',
+      component:()=>import('../views/Transfer.vue'),
+    },
+    {
       name:'User',
       path:'/user/:id',
       component:()=>import('../views/User.vue'),
@@ -128,6 +147,15 @@ const router = createRouter({
       name:"BillboardVocaloid",
       path:"/plugin/billboardvocaloid",
       component:()=>import('../views/BillboardVocaloid.vue')
+    },
+    {
+      name:"Program",
+      path:"/program/:id",
+      component:()=>import('../views/Program.vue')
+    },{
+      name:"AudioRecognition",
+      path:"/audio/recognition",
+      component:()=>import("../views/AudioRecognition.vue")
     }
   ],
 })

@@ -21,8 +21,12 @@
                         <span @click="playAll">播放</span>
                     </button>
 
-                    <button @click="load(true)">
+                    <button @click="load(true)" title="刷新音乐集">
                         <Icon icon="mingcute:refresh-3-line" style="font-size: 1.1rem;" />
+                    </button>
+
+                    <button @click="doClearGroup" title="清空音乐集">
+                        <Icon icon="material-symbols:delete-outline" class="i" style="font-size: 1.2rem;" />
                     </button>
                 </div>
             </div>
@@ -37,48 +41,46 @@
                 </button>
             </div>
         </div>
-        <div class="list-display display" v-if="classification=='list'">
+        <div class="list-display display" v-if="classification == 'list'">
             <div class="sort">
-            <button @click="sortByDefault" :class="{ 'sort-highlight': sortType === 'default' }">
-                默认排序
-            </button>
-            <button class="sort-by-name" @click="sortByName()" :class="{ 'sort-highlight': sortType === 'name' }">
-                <Icon icon="material-symbols:arrow-upward-alt-rounded" style="font-size: 1.2rem;"
-                    v-if="sortSelectorState.name" />
-                <Icon icon="material-symbols:arrow-downward-alt-rounded" style="font-size: 1.2rem;"
-                    v-if="!sortSelectorState.name" />
-                <span>名称</span>
-            </button>
-            <button class="sort-by-size" @click="sortByImportTime()"
-                :class="{ 'sort-highlight': sortType === 'importTime' }">
-                <Icon icon="material-symbols:arrow-upward-alt-rounded" style="font-size: 1.2rem;"
-                    v-if="sortSelectorState.importTime" />
-                <Icon icon="material-symbols:arrow-downward-alt-rounded" style="font-size: 1.2rem;"
-                    v-if="!sortSelectorState.importTime" />
+                <button @click="sortByDefault" :class="{ 'sort-highlight': sortType === 'default' }">
+                    默认排序
+                </button>
+                <button class="sort-by-name" @click="sortByName()" :class="{ 'sort-highlight': sortType === 'name' }">
+                    <Icon icon="material-symbols:arrow-upward-alt-rounded" style="font-size: 1.2rem;"
+                        v-if="sortSelectorState.name" />
+                    <Icon icon="material-symbols:arrow-downward-alt-rounded" style="font-size: 1.2rem;"
+                        v-if="!sortSelectorState.name" />
+                    <span>名称</span>
+                </button>
+                <button class="sort-by-size" @click="sortByImportTime()"
+                    :class="{ 'sort-highlight': sortType === 'importTime' }">
+                    <Icon icon="material-symbols:arrow-upward-alt-rounded" style="font-size: 1.2rem;"
+                        v-if="sortSelectorState.importTime" />
+                    <Icon icon="material-symbols:arrow-downward-alt-rounded" style="font-size: 1.2rem;"
+                        v-if="!sortSelectorState.importTime" />
 
-                <span>时间</span>
-            </button>
-            <button class="sort-by-size" @click="sortBySize()" :class="{ 'sort-highlight': sortType === 'size' }">
-                <Icon icon="material-symbols:arrow-upward-alt-rounded" style="font-size: 1.2rem;"
-                    v-if="sortSelectorState.size" />
-                <Icon icon="material-symbols:arrow-downward-alt-rounded" style="font-size: 1.2rem;"
-                    v-if="!sortSelectorState.size" />
-                <span>大小</span>
-            </button>
+                    <span>时间</span>
+                </button>
+                <button class="sort-by-size" @click="sortBySize()" :class="{ 'sort-highlight': sortType === 'size' }">
+                    <Icon icon="material-symbols:arrow-upward-alt-rounded" style="font-size: 1.2rem;"
+                        v-if="sortSelectorState.size" />
+                    <Icon icon="material-symbols:arrow-downward-alt-rounded" style="font-size: 1.2rem;"
+                        v-if="!sortSelectorState.size" />
+                    <span>大小</span>
+                </button>
+            </div>
+            <div class="songs" v-if="songs.length > 0">
+                <TransitionGroup name="fade">
+                    <LocalSong v-for="(song, index) in songs" :key="song.path" :cover="song?.cover" :name="song.name"
+                        :path="song.path" :album="song.album" :artist="song.artist" :size="song.size" :index="index"
+                        :time="song?.time" :duration="song.duration" :bitrate="song?.bitrate" :lossless="song?.lossless"
+                        :codec="song?.codec" :matched="song?.matched" :md5="song?.md5" @play="play"
+                        @delete-in-group="deleteInGroup" @delete="deleteFile" @setlyric="setLyric" />
+                </TransitionGroup>
+            </div>
         </div>
-        <div class="songs" v-if="songs.length > 0">
-            <TransitionGroup name="fade">
-                <LocalSong v-for="(song, index) in songs" :key="song.path" :cover="song?.cover" :name="song.name"
-                    :path="song.path" :album="song.album" :artist="song.artist" :size="song.size" :index="index"
-                    :time="song?.time" :duration="song.duration" :bitrate="song?.bitrate" :lossless="song?.lossless"
-                    :codec="song?.codec"
-                    :matched="song?.matched"
-                    :md5="song?.md5"
-                    @play="play" @delete-in-group="deleteInGroup" @delete="deleteFile" @setlyric="setLyric" />
-            </TransitionGroup>
-        </div>
-        </div>
-        <div class="artists-display display" v-if="classification=='artist'">
+        <div class="artists-display display" v-if="classification == 'artist'">
             <div class="artists">
 
             </div>
@@ -87,14 +89,14 @@
 </template>
 <script setup>
 import { localMusic, player } from '@/main';
-import { onBeforeMount, ref } from 'vue';
+import { onBeforeMount, onDeactivated, ref } from 'vue';
 import { onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import { Icon } from '@iconify/vue';
 import LocalSong from '@/components/LocalSong.vue';
 import { getDate } from '@/utils/timers';
 import { onActivated } from 'vue';
-import { showConfirmDialog } from '@/components/notification/use_notification';
+import { showConfirmDialog, showInputConfirmDialog } from '@/components/notification/use_notification';
 const cover = ref("")
 const detail = ref({})
 const id = ref("")
@@ -109,12 +111,11 @@ const sortSelectorState = ref({
     size: false,
     importTime: false
 })
-
 onActivated(() => {
-    load()
+    Promise.resolve().then(load())
 })
 async function load(reload = false) {
-let groupId;
+    let groupId;
     if (id.value) {
         groupId = id.value
     } else {
@@ -131,10 +132,10 @@ let groupId;
     const loss = await localMusic.checkFileExists(groupSongs)
     console.log(loss)
 
-    if(loss){
-        const msg = `当前音乐集缺失以下文件，已从集合中去除 \n\n ${loss.map(i=>i.path).join("\n")}`
-        showConfirmDialog("文件缺失",msg,[{label:"确定",style:"strong"}])
-        for (let lo of loss){
+    if (loss) {
+        const msg = `当前音乐集缺失以下文件，已从集合中去除 \n\n ${loss.map(i => i.path).join("\n")}`
+        showConfirmDialog("文件缺失", msg, [{ label: "确定", style: "strong" }])
+        for (let lo of loss) {
             deleteInGroup(lo.md5)
         }
     }
@@ -146,7 +147,7 @@ let groupId;
 
 
 
-    songs.value = groupSongs.map((i,index)=>{
+    songs.value = groupSongs.map((i, index) => {
         return {
             ...i.data,
             defaultSort: index
@@ -154,17 +155,17 @@ let groupId;
     })
 
 
-     if (sortType.value === 'name') {
-         sortByName()
-     }
-     else if (sortType.value === 'size') {
-         sortBySize()
-     }
-     else if (sortType.value === 'importTime') {
-         sortByImportTime()
-     }
-     count.value = songs.value.length
-     updateCover()
+    if (sortType.value === 'name') {
+        sortByName()
+    }
+    else if (sortType.value === 'size') {
+        sortBySize()
+    }
+    else if (sortType.value === 'importTime') {
+        sortByImportTime()
+    }
+    count.value = songs.value.length
+    updateCover()
 
     //  mutiClassify(songs.value)
 }
@@ -172,8 +173,8 @@ function updateCover() {
 
     for (let song of songs.value) {
         if (song.cover) {
-            localMusic.updateGroupCover(id.value,song?.md5).then(unit8Array=>{
-                cover.value = Uni8ArrayToObjectUrl("image/jpeg",unit8Array)
+            localMusic.updateGroupCover(id.value, song?.md5).then(unit8Array => {
+                cover.value = Uni8ArrayToObjectUrl("image/jpeg", unit8Array)
             })
             break
         }
@@ -290,9 +291,9 @@ async function play(md5) {
         }
     }), source)
 }
-function playAll(){
+function playAll() {
     const first = songs.value?.[0]?.md5
-    if(first){
+    if (first) {
         play(first)
     }
 }
@@ -304,9 +305,9 @@ function deleteInGroup(md5) {
         //mutiClassify(songs.value)
     })
 }
-function deleteFile(path,md5) {
+function deleteFile(path, md5) {
     deleteInGroup(md5)
-    localMusic.deleteSongFile(path, md5,id.value)
+    localMusic.deleteSongFile(path, md5, id.value)
 }
 function classificationByArtist() {
     const artists = {}
@@ -337,14 +338,30 @@ function classificationByAlbum() {
     return albums
 }
 
-function mutiClassify(songs){
+function mutiClassify(songs) {
     songsClassficatedByAlbum.value = classificationByAlbum(songs)
     songsClassficatedByArtist.value = classificationByArtist(songs)
 }
 
-async function setLyric(md5){
+async function setLyric(md5) {
     localMusic.setLocalLyricFromFile(md5)
 }
+
+async function doClearGroup() {
+    const choice = await showConfirmDialog("真的要清空音乐集吗", "接下来的操作会清空这个音乐集，但不会删除本地文件，是否继续？")
+    if (choice === 'yes') {
+        localMusic.clearGroup(id.value).then(() => {
+            
+            localMusic.removeGroupCover(id.value).then(() => {
+                cover.value = null
+                load(true)
+            })
+        })
+    }
+
+}
+
+
 </script>
 <style scoped>
 .page {
@@ -488,9 +505,11 @@ async function setLyric(md5){
         }
     }
 }
+
 .display {
     width: 92%;
     height: fit-content;
+
     .title {
         font-size: 1.8rem;
         letter-spacing: 2px;
@@ -498,6 +517,7 @@ async function setLyric(md5){
         margin-right: auto;
     }
 }
+
 .sort {
     width: 100%;
     display: flex;
@@ -525,13 +545,15 @@ async function setLyric(md5){
         }
     }
 }
-.artists-display{
+
+.artists-display {
     display: flex;
     flex-direction: row;
     height: calc(100% - 5rem);
     margin-top: 3rem;
     margin-bottom: 3rem;
-    .artists{
+
+    .artists {
         width: 15rem;
         height: 100%;
         background-color: var(--component-diff);
@@ -541,6 +563,7 @@ async function setLyric(md5){
 
 
 }
+
 .sort-highlight {
     background: var(--strong) !important;
     color: var(--text-o-1);

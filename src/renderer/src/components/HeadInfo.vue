@@ -1,8 +1,8 @@
 <template>
     <div class="top">
         <div class="cover" style="opacity: 0;">
-            <img :src="cover + `?parma=500y500`" alt="" class="main" @load="($event)=>{$event.target.parentElement.style.opacity = '1'}"/>
-            <img :src="cover + `?parma=500y500`" alt="" class="blur" />
+            <img :src="resize(cover,500)" alt="" class="main" @load="($event)=>{$event.target.parentElement.style.opacity = '1'}"/>
+            <img :src="resize(cover,500)" alt="" class="blur" />
         </div>
         <div class="detial">
             <h2 class="name">{{ name }}</h2>
@@ -45,6 +45,7 @@
 <script>
 import { Icon } from '@iconify/vue';
 import ContextMenu from './ContextMenu/ContextMenu.vue';
+import { resize } from '@/utils/imageProcess';
 
 export default {
     components: {
@@ -53,6 +54,7 @@ export default {
     props: ["cover", "name", "subtitle", "maininfo", "info", "desc", "onplayall", "onsubtitleclick", "oncreatorclick", "creator"],
     emits: ['playall', 'addlist', 'edit','browser','descClick'],
     methods: {
+        resize,
         contextMenuSelected(e) {
             const act = e.act
             const actions = {

@@ -1,170 +1,155 @@
-import { app, shell, ipcMain, dialog, nativeImage, protocol, webFrame } from 'electron'
+import { app, desktopCapturer, globalShortcut, ipcMain, session, webContents } from 'electron'
 import { join } from 'path'
-import { electronApp, optimizer, is } from '@electron-toolkit/utils'
+import { optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
-import path from 'node:path'
 import WindowManager from './windows'
 import { registerPowerEvents, registerSystemTaskbar, registerTray, registIPC } from './ipcEvents'
 import { startNcmApi } from 'NeteaseCloudMusicApi/app'
-import fs from 'fs'
-const AUDIO_MIME_TYPES = {
-  '.mp3': 'audio/mpeg',
-  '.wav': 'audio/wav',
-  '.flac': 'audio/flac',
-  '.ogg': 'audio/ogg',
-  '.aac': 'audio/aac',
-}
-const staticResourcesPath = process.resourcesPath
-startNcmApi(11451)
+import net from 'net'
 const windowManager = new WindowManager()
 export { windowManager }
-const mainWindowOptions = {
-  width: 1270,
-  height: 850,
-  minWidth: 1270,
-  minHeight: 775,
-  show: false,
-  frame: false,
-  autoHideMenuBar: true,
-  title: '猫播',
-  ...(process.platform === 'linux' ? { icon } : {}),
-  webPreferences: {
-    preload: join(__dirname, '../preload/index.js'),
-    sandbox: false,
-    nodeIntegration: true,
-    contextIsolation: false,
-    webSecurity: false
+class NekoPlayer {
+  constructor() {
+    this.initApp()
+    this.mainWindow = null
   }
-}
-function ready() {
-
-
-  const mainWindow = windowManager.createWindow('main', mainWindowOptions)
-  
-  if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-    mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
-  } else {
-    mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
+  static mainWindowOptions = {
+    width: 1260,
+    height: 830,
+    minWidth: 1260,
+    minHeight: 830,
+    show: false,
+    frame: false,
+    autoHideMenuBar: true,
+    title: 'NekoPlayer',
+    ...(process.platform === 'linux' ? { icon } : {}),
+    webPreferences: {
+      preload: join(__dirname, '../preload/index.js'),
+      sandbox: false,
+      nodeIntegration: true,
+      contextIsolation: false,
+      webSecurity: false
+    }
   }
-  //mainWindow.webContents.openDevTools()
-  mainWindow.webContents.on('did-finish-load', () => {
-    if (is.dev) {
-      setTimeout(() => {
-        mainWindow.webContents.openDevTools({
-          mode: 'detach',
-          activate: true,
-          title: 'DevTools',
-          preferences: {
-            'enable-autofill': true
+  async initApp() {
+    if (!app.requestSingleInstanceLock()) {
+      app.quit()
+    } else {
+      const apiPort = await this._findFreePort(11451, 11600)
+      await startNcmApi(apiPort)
+
+      app.on('second-instance', (event, commandLine, workingDirectory) => {
+        if (this.mainWindow) {
+          if (this.mainWindow.isMinimized()) {
+            this.mainWindow.restore()
           }
+          this.mainWindow.focus()
+          this.mainWindow.flashFrame(true)
+        }
+      })
+
+      app.on('window-all-closed', () => {
+        if (process.platform !== 'darwin') {
+          this.quit()
+        }
+      })
+
+      app.whenReady().then(async () => {
+        this.mainWindow = await this.createAppWindow()
+
+        globalShortcut.register('CommandOrControl+Alt+Shift+D', () => {
+          this.mainWindow.webContents.openDevTools({
+            mode: 'detach',
+            activate: true,
+            title: '应急开发工具'
+          })
         })
         
-      }, 1000)
-    }
-  })
-  mainWindow.on('ready-to-show',()=>{
-    registerSystemTaskbar(windowManager)
-  })
-  console.log(mainWindow.getNativeWindowHandle().readInt32LE())
-  // const desktop = windowManager.createWindow('desktop',
-  //   {
-  //     width: 500,
-  //     height: 200,
-  //     resizable: false,
-  //     show: false,
-  //     frame: false,
-  //     autoHideMenuBar: true,
-  //     transparent: true,
-  //     title: '猫播',
-  //     ...(process.platform === 'linux' ? { icon } : {}),
-  //     webPreferences: {
-  //       preload: join(__dirname, '../preload/index.js'),
-  //       sandbox: false,
-  //       nodeIntegration: true,
-  //       contextIsolation: false,
-  //     }
-  //   }
-  // )
-  // if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-  //   desktop.loadURL(process.env['ELECTRON_RENDERER_URL'] + '#/desktopplayer')
-  // }
-  // // desktop.setParentWindow(mainWindow)
-  // //desktop.webContents.openDevTools()
-  // desktop.setAlwaysOnTop(true)
-  // mainWindow.webContents.send('desktop:queryMusicInfo')
-  electronApp.setAppUserModelId('猫猫播放器')
-  app.on('browser-window-created', (_, window) => {
-    optimizer.watchWindowShortcuts(window)
-  })
+        registIPC(windowManager)
+        registerTray(windowManager)
+        registerPowerEvents()
 
-  ipcMain.on('app:close', (e) => {
+        
+      })
+    }
+  }
+  async createAppWindow() {
+    const mainWindow = windowManager.createWindow('main', NekoPlayer.mainWindowOptions)
+    if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
+      mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
+    } else {
+      mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
+    }
+    
+    mainWindow.webContents.on('did-finish-load', () => {
+      if (is.dev) {
+        setTimeout(() => {
+          mainWindow.webContents.openDevTools({
+            mode: 'detach',
+            activate: true,
+            title: 'DevTools',
+            preferences: {
+              'enable-autofill': true
+            }
+          })
+        }, 1000)
+      }
+    })
+
+    
+    mainWindow.on('ready-to-show', () => {
+      registerSystemTaskbar(mainWindow)
+      mainWindow.show()
+      mainWindow.focus()
+    })
+    app.on('browser-window-created', (_, window) => {
+      optimizer.watchWindowShortcuts(window)
+    })
+    ipcMain.on('app:close', (e) => {
+      this.quit()
+    })
+    ipcMain.on('app:minimize', () => {
+      mainWindow.minimize()
+    })
+    ipcMain.on('app:maximize', () => {
+      if (mainWindow.isMaximized()) {
+        mainWindow.restore()
+      } else {
+        mainWindow.maximize()
+      }
+    })
+    return mainWindow
+  }
+  async _findFreePort(startPort = 11451, endPort = 11600) {
+    for (let port = startPort; port <= endPort; port++) {
+      try {
+        await new Promise((resolve, reject) => {
+          const server = net.createServer()
+          server.unref()
+          server.on('error', reject)
+          server.listen({ port }, () => {
+            server.close(() => resolve(port))
+          })
+        })
+        return port
+      } catch (err) {
+        if (err.code !== 'EADDRINUSE') throw err
+      }
+    }
+    throw new Error('No free ports found in the given range')
+  }
+  async registerMediaRequestHandler(){
+    session.defaultSession.setDisplayMediaRequestHandler((request, callback) => {
+    desktopCapturer.getSources({ types: ['screen'] }).then((sources) => {
+      callback({ video: false, audio: sources[0] })
+    })
+  }, { useSystemPicker: true })
+  }
+  async quit() {
+    globalShortcut.unregisterAll()
     windowManager.closeAllWindows()
     app.quit()
-  })
-  ipcMain.on('app:minimize', () => {
-    mainWindow.minimize()
-  })
-  ipcMain.on('app:maximize', () => {
-    if (mainWindow.isMaximized()) {
-      mainWindow.restore()
-    } else {
-      mainWindow.maximize()
-    }
-  })
-
-  ipcMain.on('shell:openExplorer', (e, path) => {
-    openExplorer(path)
-  })
-  ipcMain.handle('app:info', () => {
-    return {
-      appPath: app.getAppPath(),
-      appData: app.getPath('appData'),
-      temp: app.getPath('temp'),
-      exe: app.getPath('exe'),
-      sessionData: app.getPath('sessionData'),
-      logs: app.getPath('logs'),
-      version: app.getVersion(),
-      metrics: app.getAppMetrics(),
-      musicPath: app.getPath('music')
-    }
-  })
-}
-
-app.whenReady().then(() => {
-  ready()
-  registIPC(windowManager)
-  registerTray(windowManager)
-  registerPowerEvents()
-})
-
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit()
-  }
-})
-
-async function handleDir(type) {
-  const path = await dialog.showOpenDialog({
-    title: '选择目录',
-    buttonLabel: '选择喵',
-    properties: ['openDirectory']
-  })
-  if (!path.canceled) {
-    return path.filePaths[0]
-  } else {
-    return false
   }
 }
 
-async function openExplorer(pathname) {
-  shell.openPath(path.join(pathname, '/'))
-}
-
-async function fsopen(opt) {
-  const path = await dialog.showOpenDialog(opt)
-  if (!path.canceled) {
-    return path.filePaths
-  } else {
-    return undefined
-  }
-}
+new NekoPlayer()

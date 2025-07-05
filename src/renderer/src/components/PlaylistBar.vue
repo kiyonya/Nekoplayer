@@ -25,15 +25,20 @@
       :style="{ height: `${containerHeight}px` }"
       @scroll.passive="handleScroll"
     >
+    <Icon icon="line-md:loading-loop" v-if="loading" style="position: absolute;font-size: 3em;left: calc(50% - 1rem);top: 3rem;" />
       <!-- 占位元素，撑起完整列表高度 -->
       <div :style="{ height: `${totalHeight}px` }">
         <!-- 可视区域渲染 -->
         <div 
           v-for="item in visibleItems" 
+          
+         
           :key="item.id"
           :style="{ transform: `translateY(${item.offset}px)` }"
+          style="display: flex;flex-direction: row;align-items: center;"
         >
-          <PlaylistBarSong :song="item.data" />
+          <span style="color: orange;" v-if="!item?.data?.id">:( <br/> 一条因为缺少必要信息无法显示的音频</span>
+          <PlaylistBarSong :song="item.data" v-if="item?.data?.id"/>
         </div>
       </div>
     </div>
@@ -60,7 +65,7 @@ const containerHeight = 400 // 容器可视高度
 const buffer = 5 // 缓冲项数
 const tracksContainer = ref(null)
 const scrollTop = ref(0)
-
+const loading = ref(false)
 // 计算虚拟列表范围
 const visibleItems = computed(() => {
   const startIdx = Math.max(0, Math.floor(scrollTop.value / itemHeight) - buffer)
@@ -73,14 +78,16 @@ const visibleItems = computed(() => {
     .map((item, idx) => ({
       data: item,
       offset: (startIdx + idx) * itemHeight,
-      id: item.id || idx
+      id: item?.id || idx
     }))
 })
 const totalHeight = computed(() => playlistData.value.length * itemHeight)
 async function loadList() {
   try {
     let cur = player.getCursor()
+    loading.value = true
     playlistData.value = await getList(player.list.slice(Math.max(0,cur),Math.max(0,cur) + 50))
+    loading.value = false
   } catch (err) {
   }
 }
@@ -157,10 +164,9 @@ function clearList(){
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-
   flex-direction: column;
-
   position: relative;
+ 
 }
 
 .song {

@@ -14,12 +14,19 @@ export async function getSongDetial(id) {
 export async function getSongUrl(id, quality) {
   const data = await request({
     url: `/song/url/v1?id=${id}&level=${quality}`,
-    method: 'post',
-    body: {
-      cookie: cookie
-    }
+    method: 'post'
   })
   return data.data[0]
+}
+
+export function getSongUrlBatch(ids, quality) {
+  return request({
+    url: `/song/url/v1`,
+    body: {
+      id: Array.isArray(ids) ? ids.join(',') : ids,
+      level: quality
+    }
+  })
 }
 
 export async function checkMusicStatus(id) {
@@ -43,7 +50,7 @@ export async function getSongChorus(id) {
   return data.chorus[0]
 }
 
-export async function scrobble(id,sourceId,time) {
+export async function scrobble(id, sourceId, time) {
   const data = await request({
     url: `/scrobble?id=${id}&sourceid=${sourceId}&time=${time}&timestamp=${Date.now()}`,
     method: 'post',
@@ -57,17 +64,26 @@ export async function scrobble(id,sourceId,time) {
 export async function getDynamicCover(id) {
   const data = await request({
     url: `/song/dynamic/cover?id=${id}`,
-    method: 'post',
+    method: 'post'
   })
   return data
 }
 
-
 export async function matchSongsOnNcm(songs) {
   return request({
-    url:"/search/match",
-    body:{
+    url: '/search/match',
+    body: {
       songs
-    },
+    }
+  })
+}
+
+export async function matchAudioFingerprint(duration, fp) {
+  return request({
+    url: '/audio/match?timestamp=' + Date.now(),
+    body: {
+      duration,
+      audioFP: fp
+    }
   })
 }

@@ -11,8 +11,9 @@ import request from "@/utils/request"
 export async function getComment(id,type = 0,pageNo = 1,pageSize = 20,sortType = 1,cursor) {
     const body = {id,type,pageNo,pageSize,sortType,cursor}
     return request({
-        url:"/comment/new",
+        url:`/comment/new?timestamp=${Date.now()}`,
         body:body,
+        
     })
 }
 /**

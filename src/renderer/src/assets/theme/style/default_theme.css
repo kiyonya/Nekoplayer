@@ -6,7 +6,7 @@ html[data-theme='dark'] {
   --app-dark: rgba(24, 24, 24, 0.6);
   --component: rgb(30, 30, 36);
   --component-diff:rgba(38, 38, 47, 0.6);
-  --ui: rgb(31,32,50);
+  --ui: rgb(52, 54, 60);
   --ui-light: rgb(66, 66, 66);
   --ui-dark: rgb(45, 45, 45);
   --hover: rgb(47, 47, 61);
@@ -41,9 +41,9 @@ html[data-theme='dark'] {
   --opacity-5: 0.45;
   --scrollbar-background: transparent;
   --scrollbar-color: rgb(169, 169, 169);
-  --br-1: 0rem;
-  --br-2: 0rem;
-  --br-3: 0rem;
+  --br-1: 0.3rem;
+  --br-2: 0.5rem;
+  --br-3: 0.8rem;
   --br-4: 1rem;
   --br-p-1: 5px;
   --br-p-2: 8px;
@@ -68,6 +68,7 @@ html[data-theme='dark'] {
     color: #fff !important;
   }
 
+
 }
 
 html[data-theme='light'] {
@@ -82,8 +83,8 @@ html[data-theme='light'] {
   --component-diff:rgba(255, 255, 255, 0.4);
   --ui: rgba(236, 236, 236, 0.906);
   --ui-light: rgb(236, 237, 239);
-  --ui-dark: rgb(219, 221, 223);
-  --hover: rgba(220, 220, 220, 0.7);
+  --ui-dark: rgba(219, 225, 227, 0.864);
+  --hover: rgba(243, 243, 243, 0.7);
   --border: rgb(218, 220, 223);
   --border-light: rgb(228, 230, 233);
   /* --strong: rgb(121, 130, 255);
@@ -104,8 +105,8 @@ html[data-theme='light'] {
   --text: #000;
   --text-o-1: rgba(0, 0, 0, 0.9);
   --text-o-2: rgba(0, 0, 0, 0.8);
-  --text-o-3: rgba(0, 0, 0, 0.7);
-  --text-o-4: rgba(0, 0, 0, 0.65);
+  --text-o-3: rgba(0, 0, 0, 0.75);
+  --text-o-4: rgba(0, 0, 0, 0.6);
   --decoration: #191919;
   --opacity-0: 1;
   --opacity-1: 0.8;

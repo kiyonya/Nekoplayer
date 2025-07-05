@@ -7,6 +7,11 @@
     <div class="app-bg-bloom" v-if="theme.backgroundMode === 'bloom'" :style="`--b:rgb(${store.state.bloomColor})`">
     </div>
 
+    <video class="app-bg-vid" v-if="theme.backgroundMode === 'video'" :src="theme.backgroundVideo"
+      :style="{ opacity: theme.backgroundVideoOpacity, objectFit: theme.backgroundVideoFit, transform: `scale(${theme.backgroundVideoScale})` }"
+      autoplay loop :muted="theme.backgroundVideoMute" :key="theme.backgroundVideo">
+    </video>
+
     <div class="eletron-window"></div>
 
     <TopBar v-show="$route.name !== 'DesktopLyric'"></TopBar>
@@ -18,10 +23,10 @@
     <SideBar></SideBar>
     <div class="app-view">
 
-      <router-view v-slot="{ Component }" @scroll="debounceScroll($event)" ref="routerView">
+      <router-view v-slot="{ Component }" @scroll="debounceScroll($event)" ref="routerView" >
         <transition name="slide" mode="out-in">
-          <KeepAlive :max="10"
-            :include="['Recommend', 'LocalMusic', 'Artist', 'Library', 'Search', 'Comment', 'LocalMusicGroup', 'Setting']">
+          <KeepAlive :max="20"
+            :include="['Recommend', 'LocalMusic', 'Artist', 'Library', 'Search', 'Comment', 'LocalMusicGroup', 'Setting', 'Radio', 'PlaylistSquare', 'PlaylistCategory', 'SearchDetail']">
             <component :is="Component" class="router-view" :key="$route.fullPath" />
           </KeepAlive>
         </transition>
@@ -41,6 +46,9 @@
       <Icon icon="tdesign:backtop" style="width: 2em;height: 2em;" />
     </button>
 
+    <Transition name="relax-fade">
+    <Relax v-if="store.state.standBy" @close="store.commit('standByMode',false)"/>
+    </Transition>
 
   </div>
 </template>
@@ -48,16 +56,18 @@
 import PlaylistBar from '../components/PlaylistBar.vue'
 import NormalPlaybar from '../components/NormalPlaybar.vue'
 import TopBar from '../components/TopBar.vue'
-import { computed, ref, watch ,defineAsyncComponent} from 'vue'
+import { computed, ref, watch, defineAsyncComponent } from 'vue'
 import { store } from '../store'
 import 'vue-slider-component/theme/default.css'
 import SideBar from '../components/SideBar.vue'
 import { Icon } from '@iconify/vue'
 import { debounce } from '../utils/utils'
-import { onBeforeRouteLeave} from 'vue-router'
+import { onBeforeRouteLeave } from 'vue-router'
 import MusicPlayer from '../components/musicplayer/MusicPlayer.vue'
 import Equalizer from '@/components/Equalizer.vue'
-import LoginWindow from '@/components/Login.vue' 
+import LoginWindow from '@/components/Login.vue'
+import Relax from '@/components/Relax.vue'
+import router from '@/router'
 const theme = computed({
   get: () => store.state.theme
 })
@@ -72,6 +82,10 @@ const debounceScroll = debounce((e) => {
 }, 100, false)
 function totop() {
   document.querySelector('.router-view').scrollTo({ top: 0, behavior: 'smooth' })
+}
+
+if (location.href.startsWith("file")) {
+  router.push({ name: "Recommend" })
 }
 </script>
 <style>
@@ -194,4 +208,28 @@ function totop() {
 .player-leave-to {
   transform: translateY(100%);
 }
+
+.app-bg-vid {
+  width: 100vw;
+  height: 100vh;
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: -10;
+  transition: .1s;
+}
+
+.relax-fade-enter-active,
+.relax-fade-leave-active {
+  transition: all 0.3s ease-in-out;
+}
+.relax-fade-enter-from,
+.relax-fade-leave-to {
+  transform: translateY(-100%);
+}
+.relax-fade-enter-to,
+.relax-fade-leave-from {
+  transform: translateY(0);
+}
+
 </style>

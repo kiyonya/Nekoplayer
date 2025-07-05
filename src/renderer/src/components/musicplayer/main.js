@@ -267,7 +267,6 @@ export class DynamicBackground {
   }
 
   async setColors(color) {
-    console.log(color)
     this.colors = generateSimilarColors(color,7,5);
     await this.initCircles();
   }
@@ -292,7 +291,8 @@ export class DynamicBackground {
           }
           resolve();
         });
-      });
+      })
+      this.cvs.style.opacity = 1;
     }
   }
 

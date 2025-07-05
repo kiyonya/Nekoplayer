@@ -2,7 +2,7 @@
   <div class="playlist-card" @click="jump" @keydown.enter="jump">
     <div class="cover">
       <img
-        :data-src="this.cover + '?param=500y500'"
+        :data-src="resize(cover,300)"
         alt=""
         class="main lazyload"
         v-lazy
@@ -10,7 +10,7 @@
         style="opacity: 0;"
       />
       <img
-        :data-src="this.cover + '?param=500y500'"
+        :data-src="resize(cover,300)"
         alt=""
         class="blur lazyload"
         v-lazy
@@ -54,6 +54,7 @@
 <script>
 import { Icon } from '@iconify/vue';
 import ContextMenu from './ContextMenu/ContextMenu.vue';
+import { resize } from '@/utils/imageProcess';
 export default {
   components:{
     Icon,ContextMenu
@@ -64,6 +65,7 @@ export default {
     };
   },
   methods: {
+    resize,
     jump() {
       const type = this.type || "playlist";
       if (type === "playlist") {
@@ -169,13 +171,13 @@ export default {
   margin-top: 0.4rem;
   font-size: 1.1rem;
   font-weight: 600;
-  opacity: var(--text-o-3);
+  color: var(--text-o-2);
 }
 
 .playlist-card .playlist-count {
   font-size: 0.9rem;
   margin-top: 0.3rem;
-  opacity: var(--text-o-4);
+  color: var(--text-o-4);
   left: 0;
   bottom: 0;
 }

@@ -11,7 +11,7 @@ const loginStatus = computed({
 export async function checkLoginStatus(cookie) {
   //if(!cookie){return {data:{profile:null}}}
   const data = await request({
-    url: `/login/status`,
+    url: `/login/status?timestamp=${Date.now()}`,
     body: {
       cookie
     }

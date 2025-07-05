@@ -42,6 +42,16 @@ export default class WindowManager{
         });
         this.windows.clear();
     }
+    hide(id){
+        const window = this.windows.get(id);
+        if (window) {
+            if (window.isVisible()) {
+                window.hide();
+            } else {
+                window.show();
+            }
+        }
+    }
     maximize(id){
         const window = this.windows.get(id);
         if (window) {

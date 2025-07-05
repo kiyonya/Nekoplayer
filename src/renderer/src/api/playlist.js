@@ -92,3 +92,54 @@ export async function getRelatedPlaylist(pid) {
   })
   return data
 }
+
+export function getPlaylistSquare(cursor = ""){
+  return request({
+    url:"/playlist/square/block?timestamp=" + Date.now(),
+    body:{
+      cursor
+    }
+  })
+}
+
+export async function getPlaylistCatlist() {
+  const data = await request({
+    url: `/playlist/catlist`,
+  });
+  let cats = {}
+  for(let key in data.categories){
+    cats[key] = {
+        cat:data.categories[key],
+        sub:[]
+    }
+  }
+  for(let sub of data.sub){
+    cats[sub.category].sub.push(sub)
+  }
+  let res = []
+  for(let key in cats){
+    res.push({
+      cat:cats[key]?.cat,
+      sub:cats[key]?.sub
+    })
+  }
+  return res;
+}
+
+export function getCatPlaylist(cat,page = 0,pageSize = 20){
+  let offset = page * pageSize
+  return request({
+    url:"/playlist/category/list?timestamp=" + Date.now(),
+    body:{
+      cat,
+      limit:pageSize,
+      offset:offset
+    }
+  })
+}
+
+export function getPersonalizedPlaylistTag(){
+  return request({
+    url:"/personalized/playlist/tag"
+  })
+}

@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="style.css" />
+    <title>Document</title>
+  </head>
+  <body>
+    <div class="player window">
+      <div class="window-head">
+        <span class="title">喵喵播放器 Professional</span>
+        <button>X</button>
+      </div>
+      <div class="window-frame">
+        <span>File</span>
+        <span>View</span>
+        <span>Play</span>
+        <span>Help</span>
+      </div>
+      <div class="player-inner">
+        <div class="detail">
+          <img
+            src=""
+            alt=""
+            id="cover"
+          />
+          <div class="info">
+            <span><b>正在播放</b></span>
+            <span>歌曲名称:<b id="name"></b></span>
+            <span>专辑:<b id="album"></b></span>
+            <span>作者:<b id="artists"></b></span>
+            <span>别名:<b id="alias"></b></span>
+            <span>歌曲时长:<b id="duration"></b></span>
+          </div>
+        </div>
+        <div class="wg-1">
+          <button>收藏单曲</button>
+          <button>喜欢单曲</button>
+          <button style="margin-left: auto; margin-right: 0">媒体指南</button>
+        </div>
+        <div class="slider" style="--p: 0%">
+          <div class="tb"></div>
+          <div class="tp"></div>
+        </div>
+        <div class="wg-2">
+          <button>
+            <img src="./icons/FluentPrevious16Filled.png" alt="" />
+          </button>
+          <button>
+            <img src="./icons/Fa6SolidPlay.png" alt="" />
+          </button>
+          <button>
+            <img src="./icons/MaterialSymbolsSquare.png" alt="" />
+          </button>
+          <button>
+            <img src="./icons/FluentNext16Filled.png" alt="" />
+          </button>
+          <button style="margin-left: 2rem">
+            <img src="./icons/RiRewindStartFill.png" alt="" />
+          </button>
+          <button>
+            <img src="./icons/RiRewindFill.png" alt="" />
+          </button>
+          <button>
+            <img src="./icons/RiRewindFill.png" alt="" style="transform: rotate(180deg)" />
+          </button>
+          <button>
+            <img src="./icons/RiForwardEndFill.png" alt="" />
+          </button>
+
+          <span id="time" style="margin-left: auto;margin-right: 0;font-weight: 600;"></span>
+        </div>
+      </div>
+    </div>
+    <script src="./script.js"></script>
+    <script>
+      let duration = 0;
+      function formatSecond(seconds) {
+        if (seconds) {
+          seconds = seconds.toFixed(0)
+        }
+        var minutes = Math.floor(seconds / 60)
+        var remainingSeconds = seconds % 60
+        return (
+          minutes.toString().padStart(2, '0') + ':' + remainingSeconds.toString().padStart(2, '0')
+        )
+      }
+      function updateNowPlaying(data) {
+        if(!data){return}
+        //挂载名称
+        document.getElementById('name').innerHTML = data?.name
+        document.getElementById('album').innerHTML = data?.album?.name
+        document.getElementById('artists').innerHTML = data?.artist.map(i => i.name).join(' / ')
+        document.getElementById('alias').innerHTML = data?.alias?.[0] || ''
+        document.getElementById('duration').innerHTML = formatSecond(data?.duration / 1000)
+        document.getElementById('cover').src = data?.cover
+        
+      }
+      window.addEventListener('load', event => {
+        window.electron.ipcRenderer.send('musicdesktop:init')
+      })
+  
+      
+
+      window.electron.ipcRenderer.on('musicdesktop:nowplaying', (e, nowplaying) => {
+        console.log(nowplaying)
+        updateNowPlaying(nowplaying)
+        duration = nowplaying?.duration / 1000
+      })
+
+      window.electron.ipcRenderer.on('musicdesktop:timeupdate', (e, t) => {
+        let p = t / duration
+        document.querySelector('.slider').setAttribute("style",`--p:${(p * 100)}%`)
+
+        if(duration){
+          document.getElementById('time').innerHTML = formatSecond(t) + "/" + formatSecond(duration)
+        }
+      })
+    </script>
+  </body>
+</html>

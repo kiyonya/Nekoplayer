@@ -2,7 +2,7 @@ import { getLyric } from "@/api/lyric";
 import request from "@/utils/request";
 export default class Toolkit {
     constructor(){
-
+        
     }
     async downloadLyric(id,filename = ""){
         const data = await request({
@@ -39,4 +39,5 @@ export default class Toolkit {
             }
         }
     }
+    async 
 }

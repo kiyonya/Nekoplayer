@@ -26,9 +26,8 @@
       {label:'喜欢',act:'like',icon:'ri:hearts-fill'},
       {label:'收藏',act:'collect',icon:'fluent:collections-20-filled'},
       {label:'复制链接',act:'copylink',icon:'tabler:link'},
-      {label:'复制ID',act:'copyid',icon:'tabler:number'},
       {label:'浏览器打开',act:'browser',icon:'mdi:web'},
-      ]" @select="contextMenuSelected">
+      ]" @select="menuHandler">
       </ContextMenu>
   </div>
 </template>
@@ -63,6 +62,10 @@ export default {
     },
     index: {
       type: Number
+    },
+    defaultMenuHandler:{
+      type:Boolean,
+      default:true
     }
   },
   methods: {
@@ -70,7 +73,8 @@ export default {
     play(){
       this.$emit('play',this.trackDetial?.id)
     },
-    contextMenuSelected(item){
+    menuHandler(item){
+      if(!this.defaultMenuHandler){return}
       const act = item?.act
       const actions = {
         play:()=>{

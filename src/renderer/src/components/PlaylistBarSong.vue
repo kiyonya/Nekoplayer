@@ -1,8 +1,8 @@
 <template>
   <div
     class="song"
-    :key="this.song.id"
-    :class="this.$store.state.musicInfo.id == song.id ? 'highlight' : ''"
+    :key="this.song?.id"
+    :class="this.$store.state.musicInfo.id == song?.id ? 'highlight' : ''"
     ref="song"
     @dblclick.stop="play()"
   >
@@ -18,8 +18,11 @@
       </svg>
     </div>
     <div class="info">
-      <h3 class="text-limit">{{ song.name }}</h3>
-      <ArtistNameGroup :array="song?.ar ? song?.ar : song?.artist" class="text-limit"></ArtistNameGroup>
+      <h3 class="text-limit">{{ song?.name }}</h3>
+      <span>
+        <span v-if="song?.voice" class="voice">声音</span>
+        <ArtistNameGroup :array="song?.ar ? song?.ar : song?.artist" class="text-limit"></ArtistNameGroup>
+      </span>
     </div>
     <Icon :icon="song?.local ? 'la:hdd-solid' : 'proicons:cloud'" style="position: absolute;right: 0.6rem; top: 0.5rem;" :title="song?.local ? '这首歌来自于本地磁盘' : '这首歌来自远程服务器'"/>
   </div>
@@ -42,7 +45,8 @@ export default {
   },
   methods: {
     play() {
-      player.play(this.song.id,{},false)
+      console.log(this.song?.id)
+      player.play(this.song?.id,{},false)
     },
     resize
   },
@@ -112,5 +116,13 @@ export default {
 }
 .highlight {
   background: var(--hover);
+}
+.voice{
+  font-size: 0.8rem;
+  color: var(--text-o-2);
+  border: 1px solid var(--border);
+  border-radius: var(--br-1);
+  margin-right: 0.3rem;
+  padding: 0 4px;
 }
 </style>

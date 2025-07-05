@@ -1,4 +1,4 @@
-import { contextBridge, dialog, ipcRenderer, webFrame } from 'electron'
+import {  contextBridge, desktopCapturer, ipcRenderer, webFrame } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 
 const api = {
@@ -30,7 +30,7 @@ if (process.contextIsolated) {
     contextBridge.exposeInMainWorld('electron', electronAPI)
     contextBridge.exposeInMainWorld('api', api)
   } catch (error) {
-    console.error(error)
+    
   }
 } else {
   window.electron = electronAPI

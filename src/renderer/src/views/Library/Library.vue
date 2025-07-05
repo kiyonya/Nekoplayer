@@ -42,6 +42,7 @@
       <button @click="view = 'mv_all'" :class="{ hl: view === 'mv_all' }">视频</button>
       <!-- <button @click="view = 'pod_all'" :class="{ hl: view === 'pod_all' }">播客</button> -->
       <button @click="view = 'recent_all'" :class="{ hl: view === 'recent_all' }">最近</button>
+      <button @click="$router.push({name:'Cloud'})">云盘</button>
     </div>
 
     <div class="viewer">
@@ -96,14 +97,14 @@ import { Icon } from '@iconify/vue'
 import Song_Small from '@/components/Song_Small.vue'
 import Song from '@/components/Song.vue'
 import { player } from '@/main'
-import { computed, ref } from 'vue'
+import { computed, nextTick, onDeactivated, ref } from 'vue'
 import { store } from '@/store'
-import { getUserPlaylist, getUserCollectedMV, getUserCollectedAlbums, getUserRecentListen, getUserRecentListenList, getUserRecentPlaySongs } from "../../api/user";
+import { getUserPlaylist, getUserCollectedMV, getUserCollectedAlbums, getUserRecentListen, getUserRecentPlaySongs } from "../../api/user";
 import { onMounted } from 'vue'
 import { watch } from 'vue'
 import { paralleTask } from '@/utils/lazyload'
 import { onUnmounted } from 'vue'
-import { onDeactivated } from 'vue'
+import { getCloud } from '@/api/cloud'
 const profile = computed(() => {
   return store.state.profile
 })
@@ -142,7 +143,7 @@ async function load(uid) {
     },
     async () => {
       getUserRecentPlaySongs(100).then(data => { recentAll.value = data?.data?.list; data = null })
-    }
+    },
   ]
   Promise.resolve().then(() => {
     paralleTask(tasks, 2).then(() => {
@@ -156,7 +157,8 @@ function playRecent(id) {
   const listIds = recentAll.value.map(s => { return { id: s?.data?.id, source } })
   player.playNewList(id, listIds, { type: 'recent', id: '' }, source)
 }
-onMounted(() => {
+onMounted(async () => {
+  await nextTick()
   if (profile.value?.userId) {
     load(profile.value?.userId)
   }
@@ -174,7 +176,6 @@ onUnmounted(() => {
   recentAll.value = null
   window.webFrame.clearCache()
 })
-
 </script>
 <style scoped>
 @media screen and (min-width:1301px) {
@@ -272,6 +273,7 @@ onUnmounted(() => {
   border-radius: var(--br-3);
   overflow: hidden;
   background-color: var(--component-diff);
+  backdrop-filter: blur(4px);
 }
 
 .favorite .cover {
@@ -318,6 +320,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   background-color: var(--component-diff);
+  backdrop-filter: blur(4px);
 }
 
 .recent .songs {

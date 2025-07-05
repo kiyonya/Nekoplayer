@@ -2,7 +2,8 @@
   <div class="page">
     <div class="head area">
       <div class="avatar-shell" style="opacity: 0;">
-        <img :src="resize(artistDetial?.artist?.avatar, 500)" alt="" class="main-avatar" @load="($event)=>{$event.target.parentElement.style.opacity = '1'}"/>
+        <img :src="resize(artistDetial?.artist?.avatar, 500)" alt="" class="main-avatar"
+          @load="($event) => { $event.target.parentElement.style.opacity = '1' }" />
         <img :src="resize(artistDetial?.artist?.avatar, 500)" alt="" class="blur-avatar" />
       </div>
       <div class="artist-detial">
@@ -18,9 +19,10 @@
     <div class="songs area">
       <div class="latest-album">
         <h2 class="subtitle">最新专辑</h2>
-        <AlbumCard  :name="lastestAlbum?.name" :size="lastestAlbum?.size" :cover="lastestAlbum?.picUrl"
-          :id="lastestAlbum?.id" :date="lastestAlbum?.publishTime" :hideInfo="true" @playall="player.playAlbum(null, null, { type: 'album', id: lastestAlbum?.id }, true)
-            " style="width: 12rem;"></AlbumCard>
+        <AlbumCard :name="lastestAlbum?.name" :size="lastestAlbum?.size" :cover="lastestAlbum?.picUrl"
+          :id="lastestAlbum?.id" :date="lastestAlbum?.publishTime" :hideInfo="true"
+          @playall="player.playAlbum(null, null, { type: 'album', id: lastestAlbum?.id }, true)"
+           style="width: 12rem;"></AlbumCard>
       </div>
       <div class="hot-songs" v-if="hotSongs.length > 0">
         <div class="subtitle"><span>热门歌曲</span>
@@ -30,7 +32,7 @@
         <div class="songs-grid">
           <Song_Small v-for="song in hotSongs?.slice(0, dss < 1 ? 12 : 16)" :name="song?.name" :cover="song?.al?.picUrl"
             :artist="song?.ar" :id="song?.id" :key="song?.id" @play="playHotSongs
-              "></Song_Small>
+            "></Song_Small>
         </div>
       </div>
     </div>
@@ -60,7 +62,7 @@
         <p class="bref">{{ artistDetial?.artist?.briefDesc }}</p>
         <div class="intro" v-for="intro in fullDesc">
           <h2>{{ intro.ti }}</h2>
-          <p v-html="intro.txt?.replaceAll('。','。<br>').replaceAll('\n','<br>')"></p>
+          <p v-html="intro.txt?.replaceAll('。', '。<br>').replaceAll('\n', '<br>')"></p>
         </div>
 
       </div>
@@ -70,7 +72,7 @@
 <script setup>
 import { getArtistDetial, getMvs, getArtistAlbums, getDesc } from '@/api/artist'
 import { resize } from '@/utils/imageProcess'
-import { ref } from 'vue'
+import { onDeactivated, ref } from 'vue'
 import { onBeforeMount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getArtistBriefAndSongs } from '@/api/artist'
@@ -95,7 +97,6 @@ const showDesc = ref(false)
 const fullDesc = ref([])
 function load(id) {
   getArtistDetial(id).then((data) => {
-    console.log(data?.data)
     artistDetial.value = data?.data
   })
   getArtistBriefAndSongs(id).then((data) => {
@@ -108,25 +109,22 @@ function load(id) {
     const al = data?.hotAlbums
     lastestAlbum.value = al[0]
     albums.value = al
-    console.log(albums.value)
   })
   getMvs(id, 1, 20).then((data) => {
     mvs.value = data?.mvs
   })
 
-  getDesc(id).then(desc=>{
+  getDesc(id).then(desc => {
     fullDesc.value = desc.introduction || []
   })
 }
 onBeforeMount(() => {
   let id = useRoute().params.id
-
   if (id) {
     artistId.value = id
     Promise.resolve().then(load(id))
   }
 })
-
 function playHotSongs(id) {
   player.playArtist(id, null, { type: 'artist', id: artistId.value })
 }
@@ -238,7 +236,8 @@ function playHotSongs(id) {
     overflow: hidden;
     -webkit-box-orient: vertical;
   }
-  .desc:hover{
+
+  .desc:hover {
     text-decoration: underline;
   }
 }
@@ -327,9 +326,9 @@ function playHotSongs(id) {
   background: var(--hover);
 }
 
-.introduction{
+.introduction {
   width: 37rem;
-  max-height: 40rem;
+  max-height: 35rem;
   overflow-y: auto;
   color: var(--text-o-1);
   display: flex;
@@ -338,18 +337,18 @@ function playHotSongs(id) {
   line-height: 1.5em;
 
 
-  .intro{
+  .intro {
     display: flex;
     flex-direction: column;
     gap: 0.8rem;
 
-    h2{
+    h2 {
       width: 100%;
       border-bottom: 1.5px solid var(--border);
       padding-bottom: 0.8rem;
     }
 
-    p{
+    p {
       color: var(--text-o-2);
     }
   }

@@ -10,7 +10,7 @@
       <img :src="resize(musicInfo.cover, 1500)" alt="" class="image-background" v-if="backgroundMode === 'image'" />
       <div class="dynamic-background" v-show="backgroundMode === 'dynamic'">
         <img :src="resize(musicInfo.cover, 500)" alt="" class="color-background" />
-        <canvas ref="dynamic" width="500" height="500" class="dynamic-cvs"></canvas>
+        <canvas ref="dynamic" width="500" height="500" class="dynamic-cvs" style="opacity: 0;"></canvas>
       </div>
       <div class="mcp-background" v-if="backgroundMode === 'color'" ref="colorBackground"></div>
     </div>
@@ -143,7 +143,7 @@
         </div>
       </div>
       <div class="lyric" ref="lyricContainer" :style="musicPlayerLyricGrow ? '--glow: #ffffff77;' : ''"
-        v-show="rightDisplayType === 'lyric'">
+        v-show="musicInfo?.type !== 'voice'">
         <span style="margin-top: 50%;"></span>
         <div class="lyric-cell" v-for="lrc in lyric" :class="{ blur: musicPlayerLyricBlur }"
           @click="jumpLyricTime(lrc)">
@@ -165,29 +165,39 @@
         </div>
       </div>
 
-      <div class="lyric-setting">
-        <span v-if="musicInfo.local">本地缓存</span>
+      <div class="program-detail" v-if="musicInfo?.type === 'voice'">
+        <div class="radio">
+          <img :src="programDetail?.radio?.picUrl + '?param=200y200'" alt="">
+          <div class="radio-detail">
+            <h2 class="name">{{ programDetail?.radio?.name }}</h2>
+            <div class="tags">
+              <span class="tag">{{ programDetail?.radio?.category }}</span>
+              <span class="tag">{{ programDetail?.radio?.secondCategory }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="desc">
+          <div class="ti">声音简介</div>
+          <p>{{ programDetail?.description }}</p>
+        </div>
+
       </div>
     </div>
 
-    <div class="toolkit" :class="{ 'showtookit': showTookKit }">
-      <div class="center" @click="showTookKit = !showTookKit">
-        <Icon icon="material-symbols-light:circle" class="i" />
-      </div>
-    </div>
     <!--交融滤镜-->
     <svg style="display: none">
-  <defs>
-    <filter id="mix-sharp">
-      <feGaussianBlur in="SourceGraphic" stdDeviation="30" result="blur"></feGaussianBlur>
-      <feColorMatrix in="blur" mode="matrix" values="
+      <defs>
+        <filter id="mix-sharp">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="30" result="blur"></feGaussianBlur>
+          <feColorMatrix in="blur" mode="matrix" values="
             1.5 0   0   0   0
             0   1.5 0   0   0
             0   0   1.5 0   0
             0   0   0   25  -12"></feColorMatrix>
-    </filter>
-  </defs>
-</svg>
+        </filter>
+      </defs>
+    </svg>
 
     <!--右键菜单-->
     <ContextMenu :menu="[
@@ -244,10 +254,8 @@ import ArtistNameGroup from '../ArtistNameGroup.vue'
 import ContextMenu from '../ContextMenu/ContextMenu.vue'
 import VueSlider from 'vue-slider-component'
 import { Icon } from '@iconify/vue'
-import temp from '@/store/temp'
 import { s2mmss } from '@/utils/libs'
 import { ref } from 'vue'
-import { lyricArea, lyricIndex } from '@/musicplayer/lyric'
 import ModalWindow from '../windows/ModalWindow.vue'
 import { player } from '@/main'
 import { computedHighlight } from '@/api/lyric'
@@ -256,16 +264,15 @@ import { AudioWaveDrawer, DynamicBackground } from './main'
 import { AudioWaveEffect } from "./audio_wave"
 import { LyricScroller } from './lyric_scroller'
 import { onUnmounted } from 'vue'
-import { main } from '@/plugins/qqimport'
-import { getMainColorFromImage } from '@/utils/color'
 import { nextTick } from 'vue'
+import { getProgramDetail } from '@/api/program'
 const showModalWindow = ref(false)
 const showListentogetherInvite = ref(false)
 const rightDisplayType = ref('lyric')
-const audio = temp.audio
 const playerCoverDisplayType = computed(() => {
   return store.state.config.playerCoverDisplayType
 })
+let programDetail = ref({})
 const progress = computed({
   get: () => { return store.state.audioState.ct / store.state.audioState.dt || 0 },
   set: (val) => {
@@ -287,9 +294,6 @@ const playmode = computed({
 })
 const audioState = computed({
   get: () => store.state.audioState
-})
-const lyricMode = computed(() => {
-  return lyricArea.value[lyricIndex.value]
 })
 const showPlaylistBar = computed(() => {
   return store.state.showPlaylistBar
@@ -339,9 +343,6 @@ let animationFrameIds = {
   waveDraw: null,
   mainProcess: null
 }
-let cacheClearTimer = setInterval(() => {
-  window.webFrame.clearCache()
-}, 2000);
 const cleanupFunctions = []
 onMounted(async () => {
   await nextTick()
@@ -353,14 +354,14 @@ onMounted(async () => {
       let dynamicBackground = null
       if (backgroundMode.value === "dynamic") {
         dynamicBackground = new DynamicBackground(dynamic.value)
-        console.log("rendered")
+
       }
       let dynamicWaveDrawer = null
       if (playerCoverDisplayType.value === 'wave') {
         dynamicWaveDrawer = new AudioWaveEffect(dynamicWave.value)
       }
       const handleCoverLoad = async () => {
-        console.log("coverload")
+
         getColor(mainCover).then(color => {
           dynamicWaveDrawer?.setFillColor(color.matchColor)
           if (dynamicWave?.value && playerCoverDisplayType.value === 'wave') {
@@ -385,7 +386,7 @@ onMounted(async () => {
             next: highlightSentence?.next
           })
         }
-        lyricScroller.scroll(index + 1)
+        requestIdleCallback(() => lyricScroller.scroll(index + 1))
       }
       const dynamicWaveDraw = () => {
         if (playerCoverDisplayType.value !== 'wave') return
@@ -414,34 +415,41 @@ onMounted(async () => {
         }
       )
       scrollLyric()
-      dynamicBackground?.start()
+      setTimeout(() => {
+        dynamicBackground?.start()
+      }, 200);
       dynamicWaveDraw()
       const musicInfoWatcher = watch(musicInfo, () => {
-        mainCover.src = musicInfo.value.cover?.startsWith("https") ? musicInfo.value.cover + "?param=20y20" : musicInfo.value.cover
-        console.log(mainCover.src)
+        mainCover.src = musicInfo.value.cover?.startsWith("https") ? musicInfo.value.cover + "?param=3y3" : musicInfo.value.cover
         lyricScroller.reset()
         coverTransition.value = true
         setTimeout(() => {
           coverTransition.value = false
         }, 200)
-
+        if (musicInfo.value?.type === "voice") {
+          loadVoiceDetail(musicInfo.value.id)
+        }else{
+          programDetail.value = {}
+        }
       }, { immediate: true })
       cleanupFunctions.push(musicInfoWatcher)
     }
     Promise.resolve().then(mainProcess())
   } catch (error) {
-    console.error('组件初始化失败:', error)
+    throw new Error("音乐播放器初始化失败: " + error.message)
   }
 })
 
 onUnmounted(() => {
-  // 执行所有清理函数
   cleanupFunctions.forEach(cleanup => cleanup?.())
-  cleanupFunctions.length = 0 // 清空数组
+  cleanupFunctions.length = 0
   window.webFrame.clearCache()
-  clearInterval(cacheClearTimer)
 })
-
+function loadVoiceDetail(programId) {
+  getProgramDetail(programId).then(data=>{
+    programDetail.value = data?.program
+  })
+}
 
 
 function handleContextMenu(e) {
@@ -1052,7 +1060,7 @@ function jumpLyricTime(lyric) {
   z-index: 2;
   opacity: 1;
   /**blur(500px) saturate(1.2) */
-  transition: .6s;
+  transition: 1s;
 }
 
 button {
@@ -1238,4 +1246,89 @@ button:hover {
 
   background-color: #ffffff44;
 }
+
+
+.program-detail{
+  margin-top: auto;
+  margin-bottom: auto;
+  height:80%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  color: white;
+  gap: 1rem;
+  overflow-y: auto;
+
+  .radio{
+    display: flex;
+    flex-direction: row;
+    box-sizing: border-box;
+    padding: 0.5rem;
+    background: rgba(255, 255, 255, 0.151);
+    border-radius: var(--br-2);
+    gap: 1rem;
+    align-items: center;
+    img{
+      width: 5rem;
+      height: 5rem;
+      aspect-ratio: 1/1;
+      border-radius: var(--br-2);
+    }
+    .radio-detail{
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      height: fit-content;
+      justify-content: center;
+    }
+    
+    h2{
+      font-size: 1.2rem;
+    }
+    .tags{
+      display: flex;
+      flex-direction: row;
+      gap: 1rem;
+      .tag{
+        font-size: 0.9rem;
+        box-sizing: border-box;
+        padding: 0.2rem 0.6rem;
+        background: rgba(255, 255, 255, 0.15);
+        border-radius: var(--br-1);
+      }
+      .tag:hover{
+        background: rgba(255, 255, 255, 0.25)
+      }
+    }
+  }
+
+  .desc{
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.151);
+    border-radius: var(--br-2);
+    gap: 0.5rem;
+
+    .ti{
+      font-size: 1.5rem;
+      font-weight: bold;
+    }
+
+    p{
+      color: var(--text-o-2);
+    }
+  }
+}
+
+
+
+
+
+
+
+
+
+
 </style>

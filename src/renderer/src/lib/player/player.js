@@ -1,15 +1,11 @@
 import { matchSong } from '@/api/edit'
 import { getDynamicCover, getSongDetial, getSongUrl, scrobble } from '@/api/song'
 import { store } from '@/store'
-import temp from '@/store/temp'
-import { fileToMD5 } from '@/utils/enc'
-import { nekoLyricObjectGenerator } from '@/utils/lrc'
 import { computed, watch } from 'vue'
-import { getPlaylistDetial, getPlaylistSongs, getPlaylistTracks } from '@/api/playlist'
+import { getPlaylistDetial} from '@/api/playlist'
 import { getAlbum } from '@/api/album'
 import { getArtistBriefAndSongs, getArtistDetial } from '@/api/artist'
 import { getDailySong, personalFM } from '@/api/recommend'
-import { cacheAudioFromUrl, readAudioCacheFile } from '../cache/cacheAudio'
 import { showConfirmDialog, showSideNotification } from '@/components/notification/use_notification'
 import { getLyric } from '@/api/lyric'
 import { AudioManager } from './audio'
@@ -28,6 +24,7 @@ import {
 import { resize } from '@/utils/imageProcess'
 import { localMusic } from '@/main'
 import path from 'path-browserify'
+import { getDjRadioAllVoiceId, getProgramDetail } from '@/api/program'
 const config = computed(() => {
   return store.state.config
 })
@@ -39,6 +36,9 @@ const equalizer = computed({
 })
 const profile = computed(() => {
   return store.state.profile
+})
+const quality = computed(() => {
+  return store.state.config.audioQuality
 })
 export default class Player {
   constructor() {
@@ -55,7 +55,6 @@ export default class Player {
     this.useShuffle = false
     this.volume = 1
     this.volumeBeforeMute = 1
-    //播放
     this._list = []
     this._listDetial = []
     this.listDetialCached = false
@@ -68,7 +67,7 @@ export default class Player {
     this.lastId = 0
     this.nextId = 0
     this.autoplay = true
-    this.quality = 'jyeffect'
+    this.initplay = false
     this.duration = 0
     this.currentTime = 0
     this.lyric = {}
@@ -104,10 +103,6 @@ export default class Player {
     this.listentogetherPollingInterval = null
     this.listentogetherPlaymode = 'ORDER_LOOP'
     this.INIT()
-
-    window.crm = this.createListentogetherRoom.bind(this)
-    window.jrm = this.joinListentogetherRoom.bind(this)
-    window.erm = this.endListentogetherRoom.bind(this)
   }
   static IS_INIT = false
   get list() {
@@ -155,7 +150,11 @@ export default class Player {
       }
     }
   }
-
+  clearAudioCache() {
+    this.audioCacheDB.audioCache.clear()
+    this.audioCacheDB.lyricCache.clear()
+    this.audioCacheDB.musicDetialCache.clear()
+  }
   isLogin() {
     return store.state.loginStatus > 0
   }
@@ -171,22 +170,30 @@ export default class Player {
     return this.list.findIndex((i) => i.id === findId)
   }
   play(id, source) {
-    if (source.type === 'localgroup') {
+    if (source?.type === 'localgroup') {
       this.playLocalMusic(id)
-    } else if (source.type === 'pfm') {
+    } else if (source?.type === 'pfm') {
       getSongDetial(id).then((data) => {
         data = data?.songs?.[0] || {}
         this.updatePersonalFM({ ...data, album: data?.al, artists: data?.ar })
         data = null
       })
       this.playMusicOnNcm(id)
+    } else if (source?.type === 'voicelist') {
+      //写到这
+      ////////
+      this.playVoiceOnNcm(id)
     } else {
       this.playMusicOnNcm(id)
       if (config.value.allowScrobble) {
-        console.log("提交",id,source)
         this.scrobbleTrack(id, source)
       }
     }
+    this.savePlayerState()
+
+    //上传一次列表给主进程
+    let cur = this.getCursor(id)
+    window.electron.ipcRenderer.send("player:list",this.list.slice(cur,cur+20))
   }
   playOnly(id, autoplay = true) {
     this.getAudioSourceFromNcm(id).then((url) => {
@@ -289,6 +296,25 @@ export default class Player {
       this.nextFM()
     }
   }
+  playVoiceList(start, mapListIds, source, playfirst = false) {
+    const { id } = source
+    if (mapListIds) {
+      this.changePlaylist(mapListIds, source, playfirst)
+    } else {
+      getDjRadioAllVoiceId(id).then((ids) => {
+        ids = ids.map((i) => {
+          return {
+            id: i.programId,
+            source
+          }
+        })
+        this.changePlaylist(ids, source, playfirst)
+      })
+    }
+    if (start) {
+      this.play(start, source, false)
+    }
+  }
 
   automap(list, source) {
     return list.map((i) => {
@@ -341,14 +367,13 @@ export default class Player {
     }
     this.listDetialCached = false
   }
-  async playMusicOnNcm(id, opt = { listogetherCommandReciver: false }) {
+  async playMusicOnNcm(id,opt = { listogetherCommandReciver: false }) {
     this.lastId = this.currentId
     this.currentId = id
     if (this.isListentogether && !opt.listogetherCommandReciver) {
       this.postPlayCommand(this.autoplay ? 'PLAY' : 'PAUSE')
       this.postHeartbeat(id)
     }
-    this._updateLyric([])
     this.getAudioSourceFromNcm(id).then((url) => {
       this.replaceTrack(id, url, this.autoplay)
     })
@@ -367,6 +392,8 @@ export default class Player {
     }
     this.getSongDetialFromNcm(id).then((detial) => {
       this.updateNowPlaying(detial)
+      //听歌打卡
+      
     })
 
     getDynamicCover(id).then((data) => {
@@ -384,14 +411,26 @@ export default class Player {
       tns: detial?.tns || null,
       alias: detial?.alias || null,
       mv: detial?.mv || null,
-      expectQuality: this.quality,
+      expectQuality: quality.value,
       type: 'net',
       local: false,
       format: {},
       ...etc
     }
   }
-  async getSongDetialFromNcm(id) {
+  async playVoiceOnNcm(programId) {
+    this.lastId = this.currentId
+    this.currentId = programId
+    store.commit('updateLyric', [])
+    this.getSongDetialFromNcm(programId, true).then((data) => {
+      let sid = data?.mainSongId
+      this.updateNowPlaying(data)
+      this.getAudioSourceFromNcm(sid).then((url) => {
+        this.replaceTrack(programId, url, this.autoplay)
+      })
+    })
+  }
+  async getSongDetialFromNcm(id, isProgram = false) {
     return new Promise(async (resolve, reject) => {
       const cache = await this.audioCacheDB.musicDetialCache.get({ resource: id })
 
@@ -407,12 +446,36 @@ export default class Player {
           resolve(detial)
         }
       } else {
-        getSongDetial(id).then((data) => {
-          const detial = data?.songs[0]
-          const fod = this.formatDetial(id, detial)
-          this.cacheMusicDetial(id, fod)
-          resolve(fod)
-        })
+        if (isProgram) {
+          getProgramDetail(id).then((data) => {
+            let detail = data?.program?.mainSong
+            let fd = {
+              name: detail?.name,
+              id: id,
+              cover: data?.program?.coverUrl,
+              artist: detail?.artists,
+              album: detail?.album,
+              duration: detail?.duration,
+              tns: null,
+              alias: null,
+              mv: null,
+              expectQuality: quality.value,
+              type: 'voice',
+              local: false,
+              mainSongId: detail?.id,
+              format: {}
+            }
+            this.cacheMusicDetial(id, fd)
+            resolve(fd)
+          })
+        } else {
+          getSongDetial(id).then((data) => {
+            const detial = data?.songs[0]
+            const fod = this.formatDetial(id, detial)
+            this.cacheMusicDetial(id, fod)
+            resolve(fod)
+          })
+        }
       }
     })
   }
@@ -423,7 +486,7 @@ export default class Player {
     const coverUrl = detial?.cover
     const fileid = `cover-${id}`
     const cacheResult = await window.electron.ipcRenderer.invoke('tool:downloadFileTo', {
-      url: coverUrl + '?params=500y500',
+      url: coverUrl + '?param=500y500',
       filepath: config.value.cachePath,
       filename: fileid + '.cb'
     })
@@ -436,6 +499,10 @@ export default class Player {
     }
   }
   replaceTrack(id, file, autoplay = true) {
+    if (this.initplay) {
+      autoplay = false
+      this.initplay = false
+    }
     this.audioManager.loadFromUrl(file, autoplay)
   }
   /**
@@ -465,11 +532,9 @@ export default class Player {
       this.play(this.list[0]?.id, source)
     }
   }
-  clearPlaylist(){
-    let now = this.list.filter(i=>i.id == this.currentId)
-    console.log(now)
+  clearPlaylist() {
+    let now = this.list.filter((i) => i.id == this.currentId)
     this.list = [...now]
-    
   }
   replacePlaylist(source) {
     return new Promise((resolve, reject) => {
@@ -533,8 +598,7 @@ export default class Player {
     if (!['playlist', 'album'].includes(source?.type)) {
       return
     }
-    const scrobbleResult = await scrobble(id, source?.id,this.audioManager.duration)
-    console.log(scrobbleResult)
+    const scrobbleResult = await scrobble(id, source?.id, '')
   }
   next() {
     if (this.isPersonalFM) {
@@ -642,6 +706,8 @@ export default class Player {
     if (this.isListentogether) {
       this.postListogetherData()
     }
+    //通知ipc
+    window.electron.ipcRenderer.send("player:playmodechange",this.playmode)
   }
   switchPlaymode() {
     if (this.playmode === 'list') {
@@ -655,11 +721,6 @@ export default class Player {
   updateNowPlaying(info) {
     this.currentMusicInfo = info
     store.commit('updateMusicInfo', this.currentMusicInfo)
-
-    window.electron.ipcRenderer.send(
-      'app->desktop:musicinfo',
-      JSON.stringify(this.currentMusicInfo)
-    )
     //当前播放的信息发给主进程进行保存
     window.electron.ipcRenderer.send('player:nowplaying', this.currentMusicInfo)
     if (true) {
@@ -711,11 +772,11 @@ export default class Player {
       this.audioManager.seek(0)
       this.execPlay()
     }
+    window.electron.ipcRenderer.send("player:trackend")
   }
   onTimeupdate() {
     const currentTime = this.audioManager.currentTime //ss
     this.currentTime = currentTime
-    window.electron.ipcRenderer.send('app->desktop:timeupdate', currentTime)
     window.electron.ipcRenderer.send('player:timeupdate', currentTime)
     store.commit('updateAudioState', { key: 'ct', value: currentTime })
   }
@@ -723,32 +784,30 @@ export default class Player {
     const duration = this.audioManager.durationSync // ss
     this.duration = duration
     store.commit('updateAudioState', { key: 'dt', value: duration })
+    window.electron.ipcRenderer.send("player:canplay",duration)
   }
   onPause() {
     store.commit('updateAudioState', { key: 'state', value: 'pause' })
-    window.electron.ipcRenderer.send('app->desktop:pause')
     window.electron.ipcRenderer.send('player:pause')
   }
   onPlay() {
     store.commit('updateAudioState', { key: 'state', value: 'play' })
-    window.electron.ipcRenderer.send('app->desktop:play')
     window.electron.ipcRenderer.send('player:play')
   }
   onVolumeChange() {
     store.commit('updateAudioState', { key: 'volume', value: this.audioManager.volume })
-    window.electron.ipcRenderer.send('app->desktop:volumechange', this.audioManager.volume)
-    window.electron.ipcRenderer.send('player:volumechange')
+    window.electron.ipcRenderer.send('player:volumechange',this.audioManager.volume)
   }
   async getAudioSourceFromNcm(id) {
-    const cache = await this.readAudioFromCache(id, this.quality)
+    const cache = await this.readAudioFromCache(id, quality.value)
     if (cache) {
       return cache
     } else if (this.isLogin()) {
-      const track = await getSongUrl(id, this.quality)
+      const track = await getSongUrl(id, quality.value)
       if (!track) return null
       if (!track.url) return null
       if (track.freeTrialInfo !== null) return null
-      this.cacheAudioBuffer(id, this.quality, track.url.replace(/^http:/, 'https:'))
+      this.cacheAudioBuffer(id, quality.value, track.url.replace(/^http:/, 'https:'))
       return track.url.replace(/^http:/, 'https:')
     } else {
       const outerLink = `https://music.163.com/song/media/outer/url?id=${id}`
@@ -795,13 +854,10 @@ export default class Player {
     let path, data
     if (!localSongData) {
       if (this.quickPlayAudios[md5]) {
-        console.log(this.quickPlayAudios)
-        console.log(this.quickPlayAudios,md5)
         path = this.quickPlayAudios[md5]?.path
         data = this.quickPlayAudios[md5]
       }
     } else {
-      console.log(localSongData)
       path = localSongData?.path
       data = localSongData?.data
     }
@@ -809,8 +865,6 @@ export default class Player {
     if (!path || !data) {
       return
     }
-
-    console.log(data)
     const exist = await window.api.fileExist(path)
     if (exist) {
       this.replaceTrack(md5, path, this.autoplay)
@@ -857,10 +911,9 @@ export default class Player {
   async quickPlayAudioFiles(files) {
     const details = await localMusic.getLocalMusicMatchedDetial(files)
     const itemsArray = Object.values(details)
-    for(const d of itemsArray){
+    for (const d of itemsArray) {
       this.quickPlayAudios[d?.md5] = d
     }
-    console.log(this.quickPlayAudios)
     this.playInsertTracks(
       itemsArray[0].md5,
       itemsArray.map((i) => {
@@ -878,22 +931,13 @@ export default class Player {
       }
     )
   }
-
   sendLyric(lyric) {
-    window.electron.ipcRenderer.send('app->desktop:lyric', JSON.stringify(lyric))
+    window.electron.ipcRenderer.send("player:updatelyric",lyric || [])
   }
   /**
    * 更新音乐的信息
    * @param {object} info
    */
-
-  /**
-   * 更新歌词
-   * @param {object} lyric
-   */
-  _updateLyric(lyric) {
-    temp.lyric.value = lyric
-  }
   _insert(arr, data, index) {
     if (index < 0 || index > arr.length) {
       return
@@ -959,11 +1003,11 @@ export default class Player {
     if (Player.IS_INIT) {
       return
     }
+    this.readPlayerState()
     this.initMeidaSession()
     this.eventListen()
     this.initAudioEffect()
     this.initIpc()
-    this.syncListentogether()
     Player.IS_INIT = true
   }
   initPersonalFM() {
@@ -1027,6 +1071,9 @@ export default class Player {
     })
   }
   initIpc() {
+    window.electron.ipcRenderer.on('player:playsong', (e, id,source) => {
+      this.play(id,source)
+    })
     window.electron.ipcRenderer.on('player:seek', (e, currentTime) => {
       this.seek(currentTime)
     })
@@ -1042,17 +1089,8 @@ export default class Player {
     window.electron.ipcRenderer.on('player:playmode', (e, mode) => {
       this.changePlaymode(mode)
     })
-    window.electron.ipcRenderer.on('desktop:ready', (e) => {
-      window.electron.ipcRenderer.send(
-        'app->desktop:musicinfo',
-        JSON.stringify(this.currentMusicInfo)
-      )
-      if (this.audioManager.state === 'play') {
-        window.electron.ipcRenderer.send('app->desktop:play')
-      } else {
-        window.electron.ipcRenderer.send('app->desktop:pause')
-      }
-      window.electron.ipcRenderer.send('app->desktop:lyric', JSON.stringify(this.lyric))
+    window.electron.ipcRenderer.on("player:changevolume",(e,v)=>{
+      this.setVolume(v)
     })
   }
   updateMediaSession(info) {
@@ -1447,7 +1485,43 @@ export default class Player {
   _listentogetherInviteLinkFormatter(roomId, creatorId, songId = this.currentId, motd = '') {
     return `${motd} https://st.music.163.com/listen-together/share/?songId=${songId}&roomId=${roomId}&inviterId=${creatorId}`
   }
-  async syncListentogether() {}
+
+  //保存期
+  async savePlayerState() {
+    if (!config.value?.savePlaylist) {
+      localStorage.setItem('neko_player_state', JSON.stringify({}))
+      return
+    }
+    let playerSave = {
+      list: this.list,
+      mode: this.playmode,
+      current: this.currentId,
+      cur: this.getCursor()
+    }
+    localStorage.setItem('neko_player_state', JSON.stringify(playerSave))
+  }
+
+  async readPlayerState() {
+    if (!config.value?.savePlaylist) {
+      this.initplay = false
+      return
+    }
+    let state = JSON.parse(localStorage.getItem('neko_player_state'))
+    if (state) {
+      this.list = state?.list || []
+      state.mode && this.changePlaymode(state?.mode)
+      this.currentId = state?.current || 0
+
+      if (state.cur !== undefined) {
+        let audio = this.list[state.cur]
+        console.log(audio)
+        this.initplay = true
+        if (audio && audio?.id && audio?.source) {
+          this.play(audio?.id, audio?.source)
+        }
+      }
+    }
+  }
 }
 /**
  * 

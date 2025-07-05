@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="style.css" />
+    <title>Document</title>
+  </head>
+  <body>
+    <div class="background">
+      <img src="" alt="" class="background-cover" />
+    </div>
+    <div class="nowplaying">
+      <img src="" alt="" class="cover" />
+      <h1 class="name"></h1>
+    </div>
+    <script>
+     
+      function updateNowPlaying(data) {
+        document.querySelector('.cover').src = data?.cover || ''
+        document.querySelector('.name').innerHTML = data?.name
+        document.querySelector('.background-cover').src = data?.cover
+      }
+      window.electron.ipcRenderer.on('musicdesktop:nowplaying', (e, nowplaying) => {
+        console.log(nowplaying)
+        updateNowPlaying(nowplaying)
+      })
+
+      window.addEventListener('load', event => {
+        window.electron.ipcRenderer.send('musicdesktop:getnowplaying')
+      })
+    </script>
+  </body>
+</html>

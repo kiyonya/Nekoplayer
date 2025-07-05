@@ -2,7 +2,6 @@ import { createWriteStream, existsSync } from 'fs'
 import { logger } from './log'
 import { readFile } from 'fs/promises'
 import { getBillboardVOCALOIDSongs } from './plugins/billboard_vocaloid_rank'
-import { is } from '@electron-toolkit/utils'
 const {
   ipcMain,
   app,
@@ -12,7 +11,10 @@ const {
   nativeImage,
   powerSaveBlocker,
   powerMonitor,
-  ipcRenderer
+  ipcRenderer,
+  globalShortcut,
+  shell,
+  desktopCapturer
 } = require('electron')
 const path = require('path')
 const crypto = require('crypto')
@@ -20,107 +22,158 @@ const fs = require('fs')
 const musicMeta = require('music-metadata')
 const https = require('https')
 const http = require('http')
+const downloader = new FileDownloader(10)
 const staticResourcesPath = process.resourcesPath
 function getResourcesPath() {
   if (!app.isPackaged) {
     return path.join(__dirname, '../../resources')
   }
-  return path.join(process.resourcesPath, '/resources')
+  return path.join(process.resourcesPath, '/app.asar', '/resources')
 }
+
 import { windowManager } from '.'
 import { createDesktopPlayer, killDesktopPlayer } from './desktop_player'
 import { createMusicDesktop } from './music_desktop'
-import { captcha_verify, login_cellphone } from 'NeteaseCloudMusicApi'
-
+import { captcha_verify, login_cellphone, song_detail } from 'NeteaseCloudMusicApi'
+import { FileDownloader } from './fsdownloader'
 const saveData = {
   nowPlaying: null,
-  currentTime: 0
+  currentTime: 0,
+  state: 'pause',
+  list:[],
+  lyric:[],
+  volume:1,
+  playmode:''
 }
-
 export function registIPC() {
+  const mainWindow = windowManager.getWindow('main')
   ipcMain.on('app:openWebView', (e, url) => {
     const webView = windowManager.createWindow('webview')
-    console.log(url)
     webView.loadURL(url)
   })
-  ipcMain.on('app->desktop:musicinfo', (e, data) => {
-    const desktopWindows = windowManager.getWindow('desktop')
-    if (desktopWindows) {
-      desktopWindows.webContents.send('desktop:musicinfo', data)
+  ipcMain.on('app:useDesktopPlayer', (e,entryName = "default") => {
+    let iscreate = windowManager.getWindow("desktopplayer")
+    if(iscreate){
+      return
+    }
+    const desktopPlayer = createDesktopPlayer(entryName)
+    desktopPlayer.on('show', () => {
+      desktopPlayer?.webContents?.send('desktopplayer:nowplaying', saveData.nowPlaying || {})
+      desktopPlayer?.webContents?.send('desktopplayer:state', saveData.state || 'pause')
+      desktopPlayer?.webContents?.send('desktopplayer:list', saveData.list)
+      desktopPlayer?.webContents?.send('desktopplayer:lyric', saveData.lyric)
+      desktopPlayer?.webContents?.send('desktopplayer:volumechange', saveData.volume)
+      desktopPlayer?.webContents?.send('desktopplayer:playmode', saveData.playmode)
+    })
+  })
+  ipcMain.on("app:closeDesktopPlayer",()=>{
+    killDesktopPlayer()
+  })
+  ipcMain.on('app:resize', (e, winId,x, y) => {
+    const w = windowManager.getWindow(winId)
+    if (w) {
+      w.setContentSize(x, y)
     }
   })
-  ipcMain.on('app->desktop:lyric', (e, lyric) => {
-    const desktopWindows = windowManager.getWindow('desktop')
-    if (desktopWindows) {
-      desktopWindows.webContents.send('desktop:lyric', lyric)
+  ipcMain.on("player:canplay",(e,d)=>{
+     const desktopPlayer = windowManager.getWindow('desktopplayer')
+    if (desktopPlayer) {
+      desktopPlayer.webContents.send('desktopplayer:canplay', d)
     }
   })
-  ipcMain.on('app->desktop:play', (e) => {
-    const desktopWindows = windowManager.getWindow('desktop')
-    if (desktopWindows) {
-      desktopWindows.webContents.send('desktop:play')
+  ipcMain.on("player:volumechange",(e,volume)=>{
+    saveData.volume = volume
+     const desktopPlayer = windowManager.getWindow('desktopplayer')
+    if (desktopPlayer) {
+      desktopPlayer.webContents.send('desktopplayer:volumechange', volume)
     }
   })
-  ipcMain.on('app->desktop:pause', (e) => {
-    const desktopWindows = windowManager.getWindow('desktop')
-    if (desktopWindows) {
-      desktopWindows.webContents.send('desktop:pause')
+  ipcMain.on("player:list",(e,list)=>{
+    saveData.list = list
+    const desktopPlayer = windowManager.getWindow('desktopplayer')
+    if (desktopPlayer) {
+      desktopPlayer.webContents.send('desktopplayer:list', list)
     }
   })
-  ipcMain.on('app->desktop:volumechange', (e, volume) => {
-    const desktopWindows = windowManager.getWindow('desktop')
-    if (desktopWindows) {
-      desktopWindows.webContents.send('desktop:volumechange', volume)
+  ipcMain.on('player:nowplaying', (e, nowplaying) => {
+    saveData.nowPlaying = nowplaying
+    const musicDesktop = windowManager.getWindow('musicdesktop')
+    if (musicDesktop) {
+      musicDesktop.webContents.send('musicdesktop:nowplaying', nowplaying)
+    }
+    const desktopPlayer = windowManager.getWindow('desktopplayer')
+    if (desktopPlayer) {
+      desktopPlayer.webContents.send('desktopplayer:nowplaying', nowplaying)
     }
   })
-  ipcMain.on('app->desktop:timeupdate', (e, currentTime) => {
-    const desktopWindows = windowManager.getWindow('desktop')
-    if (desktopWindows) {
-      desktopWindows.webContents.send('desktop:timeupdate', currentTime)
+  ipcMain.on('player:timeupdate', (e, currentTime) => {
+    saveData.currentTime = currentTime
+    const musicDesktop = windowManager.getWindow('musicdesktop')
+    if (musicDesktop) {
+      musicDesktop.webContents.send('musicdesktop:timeupdate', currentTime || 0)
+    }
+    const desktopPlayer = windowManager.getWindow('desktopplayer')
+    if (desktopPlayer) {
+      desktopPlayer.webContents.send('desktopplayer:timeupdate', currentTime || 0)
     }
   })
-  ipcMain.on('desktop->app:seek', (e, currentTime) => {
-    const main = windowManager.getWindow('main')
-    if (main) {
-      main.webContents.send('app:seek', currentTime)
+  ipcMain.on('player:updatelyric', (e, lyric) => {
+    saveData.lyric  = lyric
+    const desktopPlayer = windowManager.getWindow('desktopplayer')
+    if (desktopPlayer) {
+      desktopPlayer.webContents.send('desktopplayer:lyric', lyric)
     }
   })
-  ipcMain.on('desktop->app:next', (e) => {
-    const main = windowManager.getWindow('main')
-    if (main) {
-      main.webContents.send('app:next')
+  ipcMain.on('player:pause', () => {
+    saveData.state = 'pause'
+    const desktopPlayer = windowManager.getWindow('desktopplayer')
+    if (desktopPlayer) {
+      desktopPlayer.webContents.send('desktopplayer:state', 'pause')
     }
   })
-  ipcMain.on('desktop->app:previous', (e) => {
-    const main = windowManager.getWindow('main')
-    if (main) {
-      main.webContents.send('app:previous')
+  ipcMain.on('player:play', () => {
+    saveData.state = 'play'
+    const desktopPlayer = windowManager.getWindow('desktopplayer')
+    if (desktopPlayer) {
+      desktopPlayer.webContents.send('desktopplayer:state', 'play')
     }
   })
-  ipcMain.on('desktop->app:toggleplay', () => {
-    const main = windowManager.getWindow('main')
-    if (main) {
-      main.webContents.send('app:toggleplay')
+  ipcMain.on("player:playmodechange",(e,m)=>{
+    saveData.playmode = m
+    const desktopPlayer = windowManager.getWindow('desktopplayer')
+    if (desktopPlayer) {
+      desktopPlayer.webContents.send('desktopplayer:playmode', m)
     }
   })
-  ipcMain.on('desktop->app:volumechange', (e, volume) => {
-    const main = windowManager.getWindow('main')
-    if (main) {
-      main.webContents.send('app:volumechange', volume)
-    }
+  ipcMain.on("toplayer:changevolume",(v)=>{
+    mainWindow?.webContents.send('player:changevolume',v)
   })
-  ipcMain.on('desktop->app:ready', () => {
-    const main = windowManager.getWindow('main')
-    if (main) {
-      main.webContents.send('desktop:ready')
-    }
+  ipcMain.on("toplayer:playmode",(m)=>{
+    mainWindow?.webContents.send('player:playmode',m)
   })
-  ipcMain.on('app:useDesktopPlayer', () => {
-    if (windowManager.getWindow('desktop')) {
-      killDesktopPlayer()
-    } else {
-      createDesktopPlayer()
-    }
+  ipcMain.on('toplayer:pause', () => {
+    mainWindow?.webContents.send('player:pause')
+  })
+  ipcMain.on('toplayer:play', () => {
+    mainWindow?.webContents.send('player:play')
+  })
+  ipcMain.on('toplayer:previous', () => {
+    mainWindow?.webContents.send('player:previous')
+  })
+  ipcMain.on('toplayer:next', () => {
+    mainWindow?.webContents.send('player:next')
+  })
+  ipcMain.on('toplayer:seek', (e, value) => {
+    mainWindow?.webContents.send('player:seek', value)
+  })
+  ipcMain.on('toplayer:toggleplay', () => {
+    mainWindow?.webContents.send('player:toggleplay')
+  })
+  ipcMain.on("toplayer:playsong",(e,id,source)=>{
+    mainWindow?.webContents.send('player:playsong',id,source)
+  })
+  ipcMain.on("toplayer:changeplaymode",(e,mode)=>{
+    mainWindow?.webContents.send('player:playmode',mode)
   })
   ipcMain.on('app:msgbox', (e, opt) => {
     const { title = '信息', message = '默认信息' } = opt
@@ -139,28 +192,15 @@ export function registIPC() {
   ipcMain.on('main:minimize', () => {
     windowManager.minimize('main')
   })
+  ipcMain.on('main:hide', () => {
+    windowManager.hide('main')
+  })
   ipcMain.on('app:close', () => {
     windowManager.closeAllWindows()
     app.quit()
   })
   ipcMain.on('shell:openExplorer', (e, path) => {
-    openExplorer(path)
-  })
-
-  ipcMain.on('player:nowplaying', (e, nowplaying) => {
-    saveData.nowPlaying = nowplaying
-    const musicDesktop = windowManager.getWindow('musicdesktop')
-    if (musicDesktop) {
-      musicDesktop.webContents.send('musicdesktop:nowplaying', nowplaying)
-    }
-  })
-
-  ipcMain.on('player:timeupdate', (e, currentTime) => {
-    saveData.currentTime = currentTime
-    const musicDesktop = windowManager.getWindow('musicdesktop')
-    if (musicDesktop) {
-      musicDesktop.webContents.send('musicdesktop:timeupdate', currentTime || 0)
-    }
+    shell.openPath(path)
   })
 
   ipcMain.on('musicdesktop:init', (e) => {
@@ -170,34 +210,13 @@ export function registIPC() {
       musicDesktop.webContents.send('musicdesktop:timeupdate', saveData.currentTime)
     }
   })
-
   ipcMain.on('app:useMusicDesktop', (e, pathname = 'oldplayer') => {
     createMusicDesktop(pathname)
   })
-
-  //   ipcMain.handle('dialog:fsopen', async (e, opt) => {
-  //     const path = await fsopen(opt)
-  //     return path
-  //   })
-  // ipcMain.handle('app:info', () => {
-  //   return {
-  //     appPath: app.getAppPath(),
-  //     appData: app.getPath('appData'),
-  //     temp: app.getPath('temp'),
-  //     exe: app.getPath('exe'),
-  //     sessionData: app.getPath('sessionData'),
-  //     logs: app.getPath('logs'),
-  //     version: app.getVersion(),
-  //     metrics: app.getAppMetrics(),
-  //     musicPath: app.getPath('music')
-  //   }
-  // })
-
   ipcMain.on('app:registerGlobalShotcut', (e, shotcut) => {})
   ipcMain.on('log', (event, level, message) => {
     logger[level](message)
   })
-
   ipcMain.handle('file:writeBuffer', async (e, id, fpath, buffer) => {
     buffer = Buffer.from(buffer)
     try {
@@ -224,7 +243,6 @@ export function registIPC() {
       return { success: false, error: err.message }
     }
   })
-
   ipcMain.handle('file:readBuffer', async (e, id, fpath) => {
     try {
       if (!id || !fpath) {
@@ -434,6 +452,23 @@ export function registIPC() {
       }
     })
   })
+  ipcMain.handle('file:clearDir', async (e, dirPath) => {
+    if (!existsSync(dirPath)) {
+      return { exists: false }
+    }
+    try {
+      const files = await fs.promises.readdir(dirPath)
+      await Promise.all(
+        files.map((file) => {
+          const filePath = path.join(dirPath, file)
+          return fs.promises.unlink(filePath)
+        })
+      )
+      return { success: true }
+    } catch (error) {
+      return { success: false, error: error.message }
+    }
+  })
   ipcMain.handle('billboard:getVocaloidRank', (e, y, m, d, r) => {
     return getBillboardVOCALOIDSongs(y, m, d, r)
   })
@@ -543,35 +578,161 @@ export function registIPC() {
       })
     })
   })
-  ipcMain.handle("tool:getFolderSize",async (e,folderPath)=>{
-    if(!fs.existsSync(folderPath)){
+  ipcMain.handle('tool:getFolderSize', async (e, folderPath) => {
+    if (!fs.existsSync(folderPath)) {
       return null
     }
     return getLargeFolderSizeBatched(folderPath)
   })
-  ipcMain.handle("auth:loginAsCaptcha",async (e,phone,captcha)=>{
-    const request = await captcha_verify({phone,captcha})
+  ipcMain.handle('auth:loginAsCaptcha', async (e, phone, captcha) => {
+    const request = await captcha_verify({ phone, captcha })
     login_cellphone
-    
-    if(request.body?.data === true){
+
+    if (request.body?.data === true) {
       return request
-    }
-    else{
+    } else {
       return null
     }
   })
-  ipcMain.on("dev:openDevTool",async (e)=>{
-    let mainWindow = windowManager.getWindow("main")
-    if(mainWindow){
+  ipcMain.on('dev:openDevTool', async (e) => {
+    let mainWindow = windowManager.getWindow('main')
+    if (mainWindow) {
       mainWindow.webContents.openDevTools({
-          mode: 'detach',
-          activate: true,
-          title: 'DevTools',
-          preferences: {
-            'enable-autofill': true
-          }
+        mode: 'detach',
+        activate: true,
+        title: 'DevTools',
+        preferences: {
+          'enable-autofill': true
+        }
       })
     }
+  })
+  ipcMain.handle('app:registeGlobalShortcut', (e, keyObject) => {
+    registeGlobalHotkey(keyObject)
+  })
+  ipcMain.handle('file:addDownloadTask', (e, opt) => {
+    const { url, savePath, fileName, exdata } = opt
+    const taskId = downloader.addTask(
+      url,
+      savePath,
+      fileName,
+      null,
+      (path) => {
+        e.sender.send(`file:downloadTask::${taskId}::success`, {
+          status: 'done',
+          progress: 1,
+          path
+        })
+      },
+      (error) => {
+        e.sender.send(`file:downloadTask::${taskId}::error`, {
+          status: 'error',
+          progress: 0,
+          error
+        })
+      },
+      exdata
+    )
+
+    return taskId
+  })
+  ipcMain.handle('file:getDownloadTasksStatus', (e) => {
+    return downloader.getTasksStatus()
+  })
+  ipcMain.handle('file:downloaderUpdateConcurrency', (e, Concurrency) => {
+    downloader.setConcurrency(Concurrency)
+    return Concurrency
+  })
+  ipcMain.handle('file:downloaderPauseTask', (e, taskId) => {
+    return downloader.pauseTask(taskId)
+  })
+  ipcMain.handle('file:downloaderResumeTask', (e, taskId) => {
+    return downloader.resumeTask(taskId)
+  })
+  ipcMain.handle('file:downloaderPauseAllTasks', () => {
+    return downloader.pauseAll()
+  })
+  ipcMain.handle('file:downloaderResumeAllTasks', () => {
+    return downloader.resumeAll()
+  })
+  ipcMain.handle('file:downloaderCancelTasks', (e, taskId) => {
+    return downloader.cancelTask(taskId)
+  })
+
+  ipcMain.handle('dialog:highlightFileInExplorer', async (e, filePath) => {
+    if (!filePath || !fs.existsSync(filePath)) {
+      throw new Error('文件不存在或路径无效')
+    }
+    try {
+      shell.showItemInFolder(filePath)
+      return { success: true }
+    } catch (error) {
+      console.error('高亮文件时出错:', error)
+      return { success: false, error: error.message }
+    }
+  })
+
+  ipcMain.handle('file:openFileWithDefaultApp', async (e, filePath) => {
+    if (!filePath || !fs.existsSync(filePath)) {
+      throw new Error('文件不存在或路径无效')
+    }
+    try {
+      await shell.openPath(filePath)
+      return { success: true }
+    } catch (error) {
+      console.error('打开文件时出错:', error)
+      return { success: false, error: error.message }
+    }
+  })
+  ipcMain.handle(
+    'audio:getAudioSource',
+    async (e, config = { types: ['screen', 'window'], fetchWindowIcons: true }) => {
+      return await desktopCapturer.getSources(config)
+    }
+  )
+  ipcMain.handle("cli:getListDetail",async  (e,listIds)=>{
+    return (await song_detail({
+      ids:listIds.join(",")
+    })).body?.songs || []
+  })
+  ipcMain.handle("plugin:getpluginDir",()=>{
+    return !app.isPackaged ? path.join(__dirname, '../../resources', "/plugin") : path.join(process.resourcesPath, '/app.asar.unpacked',"/resources","/plugin") || null
+  })
+  ipcMain.handle("plugin:getplugins",(e)=>{
+    let pluginPath = !app.isPackaged ? path.join(__dirname, '../../resources', "/plugin") : path.join(process.resourcesPath, '/app.asar.unpacked',"/resources","/plugin")
+    //检查是否存在插件文件夹
+    if(!fs.existsSync(pluginPath)){
+      return { }
+    }
+    let pluginResult = {
+      desktopPlayer:[]
+    }
+    //读取桌面播放器的插件
+    let desktopPlayerPluginPath= path.join(pluginPath,"/desktopplayer")
+    if(fs.existsSync(desktopPlayerPluginPath)){
+      const plugin = fs.readdirSync(desktopPlayerPluginPath).filter(i=>fs.statSync(path.join(desktopPlayerPluginPath,i)).isDirectory())
+      for(let pack of plugin){
+        //尝试读取meta.json
+        let packPath = path.join(desktopPlayerPluginPath,pack)
+        let metaFile = path.join(packPath,"pack.json")
+        if(!fs.existsSync(metaFile)){continue}
+        let meta = {}
+        try {
+          meta = JSON.parse(fs.readFileSync(metaFile,{encoding:'utf-8'}))
+        } catch (error) {
+          continue
+        }
+        if(meta.icon){
+          meta.iconUrl = path.join(packPath,meta.icon)
+        }
+        if(meta.thumbnail){
+          meta.thumbnailUrl = meta?.thumbnail?.map(i=>path.join(packPath,i))
+        }
+        meta.packEntryName = pack
+        pluginResult.desktopPlayer.push(meta)
+      }
+    }
+    return pluginResult
   })
 }
 
@@ -652,6 +813,7 @@ export function registerTray() {
       mainWindow.show()
     }
   })
+  return tray
 }
 
 export function registerPowerEvents() {
@@ -672,8 +834,7 @@ export function registerPowerEvents() {
   })
 }
 
-export function registerSystemTaskbar(windowManager) {
-  const mainWindow = windowManager.getWindow('main')
+export function registerSystemTaskbar(mainWindow) {
   let thumbarButtons = [
     {
       tooltip: '1',
@@ -735,26 +896,41 @@ function getFileHash(filePath) {
   })
 }
 async function getLargeFolderSizeBatched(folderPath, batchSize = 100) {
-  let totalSize = 0;
-  let dirsToProcess = [folderPath];
+  let totalSize = 0
+  let dirsToProcess = [folderPath]
   while (dirsToProcess.length > 0) {
-    const currentDir = dirsToProcess.shift();
-    const entries = await fs.promises.readdir(currentDir, { withFileTypes: true });
+    const currentDir = dirsToProcess.shift()
+    const entries = await fs.promises.readdir(currentDir, { withFileTypes: true })
     for (let i = 0; i < entries.length; i += batchSize) {
-      const batch = entries.slice(i, i + batchSize);
-      const statsPromises = batch.map(entry => {
-        const fullPath = path.join(currentDir, entry.name);
-        return entry.isDirectory() 
+      const batch = entries.slice(i, i + batchSize)
+      const statsPromises = batch.map((entry) => {
+        const fullPath = path.join(currentDir, entry.name)
+        return entry.isDirectory()
           ? (dirsToProcess.push(fullPath), Promise.resolve(null))
-          : fs.promises.stat(fullPath);
-      });
-      const statsResults = await Promise.all(statsPromises);
+          : fs.promises.stat(fullPath)
+      })
+      const statsResults = await Promise.all(statsPromises)
       for (const stat of statsResults) {
         if (stat && !stat.isDirectory()) {
-          totalSize += stat.size;
+          totalSize += stat.size
         }
       }
     }
   }
-  return totalSize;
+  return totalSize
+}
+
+async function registeGlobalHotkey(object) {
+  globalShortcut.unregisterAll()
+  for (const key of Object.keys(object)) {
+    const value = object[key]
+    if (value?.global) {
+      globalShortcut.register(value.global, () => {
+        let mainWindow = windowManager.getWindow('main')
+        if (mainWindow) {
+          mainWindow.webContents.send('key:action', key)
+        }
+      })
+    }
+  }
 }

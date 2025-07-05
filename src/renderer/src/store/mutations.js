@@ -5,6 +5,10 @@ export default {
   isLogin(state, value) {
     state.isLogin = value
   },
+  standByMode(state,value){
+    state.standBy = value
+   
+  },
   setDeviceScreenSize(state, value) {
     state.deviceScreenSize = value
   },
@@ -90,6 +94,7 @@ export default {
   },
   updateTheme(state, { key, value }) {
     state.theme[key] = value
+    localStorage.setItem('neko_app_theme', JSON.stringify(state.theme))
   },
   updateEqualizerGains(state, value) {
     state.equalizerData.equalizerGains = value
@@ -126,5 +131,15 @@ export default {
   },
   updateListentogetherRoomDetial(state, value) {
     state.listentogetherRoomDetial = value
+  },
+  isOnline(state,value){
+    if(typeof value !== 'boolean'){
+      return
+    }
+    state.online = value
+  },
+  setAppZoom(state,value){
+    state.config.appZoomLevel = value
+    window?.webFrame?.setZoomLevel(Number(value))
   }
 }

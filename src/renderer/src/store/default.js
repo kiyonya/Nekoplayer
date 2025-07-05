@@ -46,12 +46,11 @@ const defaultAudioStatus = {
 }
 
 const defaultConfig = {
+  exitBehavior:'ask',
+  appZoomLevel:0,
+  useCookiesForPersonalRecommend: true,
 
-  useCookiesForPersonalRecommend:true,
-
-
-
-  audioQuaility: 'lossless',
+  audioQuality: 'lossless',
   enalbeEqualizer: true,
   enalbeVolumeBalance: true,
   //允许联网匹配
@@ -63,7 +62,8 @@ const defaultConfig = {
 
   //使用均衡器
   useEQ: true,
-
+  //保存上一次播放列表
+  savePlaylist: true,
   //均衡音量
   balanceAudioVolume: true,
   //淡入淡出
@@ -79,7 +79,7 @@ const defaultConfig = {
   musicPlayerLyricGlow: true,
   enableDynamicCover: true,
   //record || wave || cover
-  playerCoverDisplayType: 'record',
+  playerCoverDisplayType: 'cover',
   //音频可视化设置
   audioVisualizationConfig: {
     randomConfuse: false
@@ -97,43 +97,32 @@ const defaultConfig = {
 
   //缓存
   cachePath: 'D:\\DataPack\\fp',
+  downloadPath:"",
   enableCache: true,
   /**
    * 最大缓存空间
    * 单位 MB
    *
    */
-  maxCacheSize:2048,
+  maxCacheSize: 2048,
 
   //快捷键
- hotKey: {
-    playAndPause: { app: 'space', global: ['ctrl', 'alt', 'space'], name: '播放/暂停' },
-    previous: { app: 'left', global: ['ctrl', 'alt', 'left'], name: '上一首' },
-    next: { app: 'right', global: ['ctrl', 'alt', 'down'], name: '下一首' },
-    volumeIncrease: { app:['up','+'], global: ['ctrl', 'alt', 'up'], name: '音量加' },
-    volumeDecrease: { app: ['down','-'], global: ['ctrl', 'alt', 'down'], name: '音量减' },
-    playlistBar: { app: 'b', global: ['ctrl', 'alt', 'p'], name: '播放列表' },
-    like: { app: 'ctrl+l', global: ['ctrl', 'alt', 'l'], name: '喜欢' },
-    eq:{app:"ctrl+e",global:"ctrl+alt+e",name:"均衡器"},
-    player:{app:"p",global:"ctrl+alt+p",name:"播放页"},
-    mute:{app:"m",global:"ctrl+alt+m",name:"静音"}
-  },
-  hotKeyDefault: {
-    playAndPause: { app: 'space', global: ['ctrl', 'alt', 'space'], name: '播放/暂停' },
-    previous: { app: 'left', global: ['ctrl', 'alt', 'left'], name: '上一首' },
-    next: { app: 'right', global: ['ctrl', 'alt', 'down'], name: '下一首' },
-    volumeIncrease: { app:'up', global: ['ctrl', 'alt', 'up'], name: '音量加' },
-    volumeDecrease: { app: 'down', global: ['ctrl', 'alt', 'down'], name: '音量减' },
-    playlistBar: { app: 'b', global: ['ctrl', 'alt', 'p'], name: '播放列表' },
-    like: { app: 'ctrl+l', global: ['ctrl', 'alt', 'l'], name: '喜欢' },
-    eq:{app:"ctrl+e",global:"ctrl+alt+e",name:"均衡器"},
-    player:{app:"p",global:"ctrl+alt+p",name:"播放页"},
-    mute:{app:"m",global:"ctrl+alt+m",name:"静音"}
+  hotKey: {
+    playAndPause: { app: 'space', global: 'ctrl+alt+space', name: '播放/暂停' },
+    previous: { app: 'left', global: 'ctrl+alt+left', name: '上一首' },
+    next: { app: 'right', global: 'ctrl+alt+right', name: '下一首' },
+    volumeIncrease: { app: 'up', global: 'ctrl+alt+up', name: '音量加' },
+    volumeDecrease: { app: 'down', global: 'ctrl+alt+down', name: '音量减' },
+    playlistBar: { app: 'b', global: 'ctrl+alt+p', name: '播放列表' },
+    like: { app: 'ctrl+l', global: 'ctrl+alt+l', name: '喜欢' },
+    eq: { app: 'ctrl+e', global: 'ctrl+alt+e', name: '均衡器' },
+    player: { app: 'p', global: 'ctrl+alt+p', name: '播放页' },
+    mute: { app: 'm', global: 'ctrl+alt+m', name: '静音' }
   },
   useGlobalShortcut: true,
   allowSMTC: true,
   allowScrobble: true,
-  
+  desktopPlayerPackName:"default"
 }
 
 export { defaultPlayerData, defaultEqualizerData, defaultConfig, defaultAudioStatus }

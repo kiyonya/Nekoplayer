@@ -1,52 +1,32 @@
 <template>
-  <div
-    class="song-shell"
-    @dblclick="play"
-    ref="song"
-    :class="this.$store.state.musicInfo.id == trackDetial.id ? 'onplay' : ''"
-  >
-    <span class="serial" >{{ (index + 1).toString().padStart(2, '0') }}</span>
+  <div class="song-shell" @dblclick="play" ref="song"
+    :class="this.$store.state.musicInfo.id == trackDetial.id ? 'onplay' : ''">
+    <span class="serial">{{ (index + 1).toString().padStart(2, '0') }}</span>
     <div class="cover-shell">
       <img src="@/assets/images/play-solid.svg" alt="" class="play-btn" @click="play" />
-      <img :data-src="resize(trackDetial.cover, 100)" class="lazyload cover" ref="cover" />
+      <img :data-src="resize(trackDetial.cover, 100, true)" class="lazyload cover" ref="cover" />
     </div>
 
     <div class="info">
-      <span class="title text-limit">{{ trackDetial.name}}
-        <span class="trans-name" v-if="alianame"
-          >({{ alianame }})
+      <span class="title text-limit">{{ trackDetial.name }}
+        <span class="trans-name" v-if="alianame">({{ alianame }})
         </span>
       </span>
       <ArtistNameGroup :array="trackDetial.artist"></ArtistNameGroup>
     </div>
 
-    <RouterLink
-      class=" album"
-      :to="{ name: 'Album', params: { id: trackDetial.album.id } }"
-      v-if="trackDetial.album"
-      >{{ trackDetial.album.name }}</RouterLink
-    >
+    <RouterLink class=" album" :to="{ name: 'Album', params: { id: trackDetial.album.id } }" v-if="trackDetial.album">{{
+      trackDetial.album.name }}</RouterLink>
 
     <div class="right">
       <Icon icon="fluent:video-clip-16-regular" class="icon" v-if="trackDetial?.mv" />
-      <Icon icon="weui:like-outlined" class="icon" v-if="!this.$store.state.likeList.has(trackDetial?.id)"/>
-      <Icon icon="weui:like-filled" class="icon" v-if="this.$store.state.likeList.has(trackDetial?.id)"/>
+      <Icon icon="weui:like-outlined" class="icon" v-if="!this.$store.state.likeList.has(trackDetial?.id)" />
+      <Icon icon="weui:like-filled" class="icon" v-if="this.$store.state.likeList.has(trackDetial?.id)" />
       <span class="duration">{{ mmss(trackDetial?.duration) }}</span>
     </div>
-   
 
-    <ContextMenu :menu="[
-      {label:'播放',act:'play',icon:'ion:play'},
-      {label:'添加到下一首',act:'addnext',icon:'material-symbols-light:add-notes'},
-      'hr',
-      {label:'喜欢',act:'like',icon:'ri:hearts-fill'},
-      {label:'收藏',act:'collect',icon:'fluent:collections-20-filled'},
-      {label:'复制链接',act:'copylink',icon:'tabler:link'},
-    'hr',
-      {label:'下载歌词',act:'downloadlyric',icon:'material-symbols:download'},
-      {label:'下载nlo歌词',act:'downloadNloLyric',icon:'material-symbols:download'},
-      ]" @select="contextMenuSelected">
-      </ContextMenu>
+    <ContextMenu :menu="menu" @select="(act) => { $emit('menu', trackDetial, act), menuHandler(trackDetial, act) }">
+    </ContextMenu>
   </div>
 </template>
 <script>
@@ -57,21 +37,19 @@ import ArtistNameGroup from './ArtistNameGroup.vue'
 import { observer } from '@/lib/lazyload'
 import { resize } from '@/utils/imageProcess'
 import { Icon } from '@iconify/vue'
-import temp from '@/store/temp'
 import ContextMenu from '@/components/ContextMenu/ContextMenu.vue'
 import { player, toolkit } from '@/main'
-import { store } from '@/store'
 import { showMessageNotification } from './notification/use_notification'
 export default {
-  computed:{
-    alianame(){
-      if(this.trackDetial.alia && this.trackDetial.alia?.length > 0){
+  computed: {
+    alianame() {
+      if (this.trackDetial.alia && this.trackDetial.alia?.length > 0) {
         return this.trackDetial.alia[0]
       }
-      else if(this.trackDetial.tns && this.trackDetial.tns?.length > 0){
+      else if (this.trackDetial.tns && this.trackDetial.tns?.length > 0) {
         return this.trackDetial.tns[0]
       }
-      else{
+      else {
         return undefined
       }
     }
@@ -86,22 +64,36 @@ export default {
     return {
       el: undefined,
       text: '',
-      checked:false,
-      temp:temp
+      checked: false,
     }
   },
   props: {
-    trackDetial:{
-      type:Object,
+    trackDetial: {
+      type: Object,
     },
-    source:{
-      type:Object,
+    source: {
+      type: Object,
     },
-    index:{
-      type:Number
+    index: {
+      type: Number
+    },
+    menu: {
+      type: Array,
+      default: [{ label: '播放', act: 'play', icon: 'ion:play' },
+      { label: '添加到下一首', act: 'addnext', icon: 'material-symbols-light:add-notes' },
+        'hr',
+      { label: '收藏', act: 'collect', icon: 'fluent:collections-20-filled' },
+      { label: '复制链接', act: 'copylink', icon: 'tabler:link' },
+        'hr',
+      { label: '下载歌词', act: 'downloadlyric', icon: 'material-symbols:download' },
+      { label: '下载nlo歌词', act: 'downloadNloLyric', icon: 'material-symbols:download' },]
+    },
+    defaultMenuHandler: {
+      type: Boolean,
+      default: true
     }
   },
-  emits:["play",'browserOpen','addNext'],
+  emits: ["play", 'browserOpen', 'addNext', 'menu'],
   methods: {
     mmss,
     formatBytes,
@@ -115,44 +107,41 @@ export default {
       })
     },
     play() {
-      this.$emit('play',this.trackDetial.id)
+      this.$emit('play', this.trackDetial.id)
     },
-    contextMenuSelected(item){
+    resize,
+    menuHandler(track, item) {
+      if(!this.defaultMenuHandler){return}
+      let id = track?.id
+      let name = track?.name
       const act = item?.act
       const actions = {
-        play:()=>{
+        play: () => {
           this.play()
         },
-        addnext:()=>{
-          player.addTrackToNext(this.trackDetial?.id,this.source)
-        this.$emit('addNext',this.trackDetial?.id)
+        addnext: () => {
+          player.addTrackToNext(id, this.source)
         },
-        browser:()=>{
-          const url = `https://music.163.com/#/song?id=${this.trackDetial?.id}`
-          window.electron.ipcRenderer.send('app:openWebView',url)
+        browser: () => {
+          const url = `https://music.163.com/#/song?id=${id}`
+          window.electron.ipcRenderer.send('app:openWebView', url)
         },
-        copylink:()=>{
-          const url = `https://music.163.com/#/song?id=${this.trackDetial?.id}`
+        copylink: () => {
+          const url = `https://music.163.com/#/song?id=${id}`
           window.navigator.clipboard.writeText(url)
           showMessageNotification("已复制")
         },
-        copyid:()=>{
-          window.navigator.clipboard.writeText(this.trackDetial?.id)
-          showMessageNotification("已复制")
+        downloadlyric: () => {
+          toolkit.downloadLyric(id, name)
         },
-        downloadlyric:()=>{
-          toolkit.downloadLyric(this.trackDetial.id,this.trackDetial.name)
-        },
-        downloadNloLyric:()=>{
-          toolkit.downloadNloLyric(this.trackDetial.id,this.trackDetial.name)
+        downloadNloLyric: () => {
+          toolkit.downloadNloLyric(id, name)
         }
-        
       }
-      if(actions[act]){
+      if (actions[act]) {
         actions[act]()
       }
-    },
-    resize,
+    }
   },
 
   mounted() {
@@ -162,14 +151,16 @@ export default {
 </script>
 <style scoped>
 @keyframes song-in {
-  from{
+  from {
     transform: translateY(20px);
     opacity: 0;
   }
 }
+
 .color {
   background: var(--song-gap) !important;
 }
+
 .song-shell {
   width: 100%;
   height: 4rem;
@@ -178,14 +169,17 @@ export default {
   flex-direction: row;
   align-items: center;
   color: var(--text-o-2);
-  border-radius: var(--br-2);
+  border-radius: var(--br-1);
   position: relative;
-  animation:  song-in .4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  animation: song-in .4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
+
 .song-shell:hover {
   background: var(--hover);
 }
-.song-shell:hover,.song-shell:focus {
+
+.song-shell:hover,
+.song-shell:focus {
   .play-btn {
     opacity: 1;
   }
@@ -194,7 +188,7 @@ export default {
     filter: brightness(0.6);
   }
 
-  .right .icon{
+  .right .icon {
     opacity: 1;
   }
 }
@@ -266,7 +260,7 @@ export default {
   text-decoration: none;
 }
 
-.right{
+.right {
   width: fit-content;
   display: flex;
   flex-direction: row;
@@ -277,12 +271,14 @@ export default {
   color: var(--text-o-2);
   gap: 0.6rem;
 }
-.right .icon{
+
+.right .icon {
   width: 1.5em;
   height: 1.5em;
   color: inherit;
 }
-.right .duration{
+
+.right .duration {
   font-size: 1rem;
   font-weight: 600;
   color: inherit;
@@ -402,12 +398,14 @@ export default {
 .failed:hover {
   color: inherit;
 }
+
 .trans-name {
   opacity: 0.8;
   margin-left: 0.5rem;
   font-weight: 400;
 }
-.selector{
+
+.selector {
   width: 1.2rem;
   height: 1.2rem;
   pointer-events: all;

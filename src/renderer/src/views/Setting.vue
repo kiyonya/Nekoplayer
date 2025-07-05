@@ -1,10 +1,9 @@
 <template>
     <div class="page">
         <div class="page-selector">
-
         </div>
         <div class="common view">
-            <h2 class="t">云音乐账号</h2>
+            <h2 class="t">通用</h2>
 
             <div class="group">
                 <div class="profile">
@@ -27,6 +26,21 @@
                     <div class="t">上传播放记录</div>
                     <Switch v-model="config.allowScrobble" />
                 </div>
+                <div class="r">
+                    <div class="t">本地保存播放记录</div>
+                    <Switch v-model="config.savePlaylist"></Switch>
+                </div>
+            </div>
+             <div class="group">
+                <div class="r">
+                    <div class="t">退出行为</div>
+                    <select name="" id="" @change="config = { key: 'exitBehavior', value: $event.target.value }"
+                        :value="config.exitBehavior">
+                        <option value="close">关闭应用</option>
+                        <option value="hide">最小化到托盘</option>
+                        <option value="ask">每次询问</option>
+                    </select>
+                </div>
             </div>
         </div>
         <div class="performance view">
@@ -34,16 +48,28 @@
             <div class="group">
                 <div class="t">应用主题</div>
                 <div class="themes">
-                    <div class="theme follow" @click="setTheme({ key: 'theme', value: 'default:follow' })">
-                        <div class="color"></div>
+                    <div class="theme follow" @click="setTheme({ key: 'theme', value: 'default:follow' })"
+                        :class="{ 'ch': theme.theme === 'default:follow' }">
+                        <div class="color">
+                            <Icon icon="fluent:dark-theme-20-filled"
+                                style="font-size: 1.5em;position: absolute;right: 0.5rem;bottom: 0.5rem;mix-blend-mode: difference;" />
+                        </div>
                         <span>跟随系统</span>
                     </div>
-                    <div class="theme light" @click="setTheme({ key: 'theme', value: 'default:light' })">
-                        <div class="color"></div>
+                    <div class="theme light" @click="setTheme({ key: 'theme', value: 'default:light' })"
+                        :class="{ 'ch': theme.theme === 'default:light' }">
+                        <div class="color">
+                            <Icon icon="tabler:sun"
+                                style="font-size: 1.5em;position: absolute;right: 0.5rem;bottom: 0.5rem;color: black;" />
+                        </div>
                         <span>浅色模式</span>
                     </div>
-                    <div class="theme dark" @click="setTheme({ key: 'theme', value: 'default:dark' })">
-                        <div class="color"></div>
+                    <div class="theme dark" @click="setTheme({ key: 'theme', value: 'default:dark' })"
+                        :class="{ 'ch': theme.theme === 'default:dark' }">
+                        <div class="color">
+                            <Icon icon="tabler:moon"
+                                style="font-size: 1.5em;position: absolute;right: 0.5rem;bottom: 0.5rem;color: white;" />
+                        </div>
                         <span>深色模式</span>
                     </div>
                 </div>
@@ -61,13 +87,26 @@
                 </div>
                 <div class="r">
                     <div class="t">应用字体</div>
-                    <select name="" id="" @change="theme = { key: 'font', value: $event.target.value }">
+                    <select name="" id="" @change="theme = { key: 'font', value: $event.target.value }"
+                        :value="theme.font" style="max-width: 10rem;overflow-x: hidden;">
+                        <option value="default">默认</option>
                         <option :value="font.postscriptName" v-for="font in zhFonts">{{ font.fullName }}</option>
                     </select>
                 </div>
                 <div class="r">
-                    <div class="t">应用圆角</div>
-                    <Switch />
+                    <div class="t">界面比例</div>
+                    <select name="" id="" @change="($event) => { store.commit('setAppZoom', $event.target.value) }"
+                        :value="config.appZoomLevel">
+                        <option value="-4">-4x</option>
+                        <option value="-3">-3x</option>
+                        <option value="-2">-2x</option>
+                        <option value="-1">-1x</option>
+                        <option value="0">默认</option>
+                        <option value="1">1x</option>
+                        <option value="2">2x</option>
+                        <option value="3">3x</option>
+                        <option value="4">4x</option>
+                    </select>
                 </div>
 
             </div>
@@ -133,20 +172,57 @@
                         </div>
                     </div>
                 </div>
+
+                <div class="video-preview" v-if="theme.backgroundMode === 'video'">
+                    <div class="use-video">
+                        <div class="preview">
+                            <video v-if="theme.backgroundMode === 'video'" :src="theme.backgroundVideo"
+                                :style="{ opacity: theme.backgroundVideoOpacity, objectFit: theme.backgroundVideoFit, transform: `scale(${theme.backgroundVideoScale})` }"
+                                autoplay loop muted>
+                            </video>
+                        </div>
+                        <div class="set-video-mode">
+                            <button @click="selectVideo">选择视频</button>
+                            <select name="" id=""
+                                @change="theme = { key: 'backgroundVideoFit', value: $event.target.value }">
+                                <option value="cover">覆盖</option>
+                                <option value="contain">包含</option>
+                                <option value="fill">填充</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="video-adjust">
+                        <div class="slider">
+                            <span>不透明度</span>
+                            <VueSlider v-model="theme.backgroundVideoOpacity" :min="0.1" :max="1" :interval="0.1"
+                                style="flex: 1;" :process-style="{ background: 'var(--strong)' }"></VueSlider>
+                        </div>
+                        <div class="slider">
+                            <span>视频缩放</span>
+                            <VueSlider v-model="theme.backgroundVideoScale" :min="0.5" :max="3" :interval="0.1"
+                                style="flex: 1;" :process-style="{ background: 'var(--strong)' }"></VueSlider>
+                        </div>
+                        <div class="slider">
+                            <span>视频静音</span>
+                        <Switch v-model="theme.backgroundVideoMute" />
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
         <div class="audio view">
-            <h2 class="t">音频</h2>
+            <h2 class="t">播放</h2>
             <div class="group">
                 <div class="r">
                     <div class="t">音频质量</div>
-                    <select name="" id="" @change="config = { key: 'audioQuaility', value: $event.target.value }"
-                        :value="config.audioQuaility">
+                    <select name="" id="" @change="config = { key: 'audioQuality', value: $event.target.value }"
+                        :value="config.audioQuality">
                         <option value="standard">标准 128kbps</option>
                         <option value="higher">极高 192kbps</option>
                         <option value="exhigh">超高 320kbps</option>
                         <option value="lossless">无损 FLAC</option>
                         <option value="hires">Hi-Res</option>
+                        <option value="jyeffect">超清母带</option>
                     </select>
                 </div>
                 <div class="r">
@@ -163,6 +239,7 @@
                         :tooltip-formatter="(t) => (t / 1000) + 's'" :process-style="{ background: 'var(--strong)' }"
                         :tooltip-style="{ background: 'var(--strong)' }" :width="350"></VueSlider>
                 </div>
+
                 <div class="r">
                     <div class="t">使用图形均衡器</div>
                     <Switch v-model="config.useEQ"></Switch>
@@ -212,7 +289,6 @@
 
 
         </div>
-
         <div class="file view">
             <h2 class="t">存储</h2>
             <div class="group">
@@ -226,26 +302,78 @@
                     <button @click.stop="selectCacheFolder">更改缓存目录</button>
                 </div>
                 <div class="r" v-if="config.enableCache">
-                    <div class="t">缓存最大占用</div>
-                    <span>已使用:{{ (cacheUsage / 1024 / 1024).toFixed(2) }}MB / 全部:{{ config.maxCacheSize }}MB</span>
-                    <VueSlider v-model="config.maxCacheSize" :min="1024" :max="10240" :interval="1" :width="350"
-                        :tooltip-formatter="(i) => (i / 1024).toFixed(2) + 'GB'"
-                        :process-style="{ background: 'var(--strong)' }"
-                        :tooltip-style="{ background: 'var(--strong)' }" :lazy="true"></VueSlider>
+                    <div class="t">缓存占用</div>
+                    <span>已使用 : {{ (cacheUsage / 1024 / 1024).toFixed(2) }}MB</span>
+                    <button @click.stop="clearCache">清除缓存</button>
+                </div>
+                <div class="r" v-if="config.enableCache">
+                    <div class="t">下载目录</div>
+                    <span>{{ config.downloadPath }}</span>
+                    <button @click.stop="selectDownloadFolder">更改下载目录</button>
                 </div>
             </div>
         </div>
-
-        <div class="behavior view">
-            <h2 class="t">性能</h2>
+        <div class="hotkey view">
+            <h2 class="t">快捷键</h2>
+            <div class="group">
+                <div class="hotkey-tab">
+                    <div class="function">
+                        <span>功能</span><span>应用快捷键</span><span>全局快捷键</span>
+                    </div>
+                    <div class="function" v-for="(value, key) in config.hotKey">
+                        <span class="name">{{ value?.name }}</span>
+                        <input type="text" :value="value.app" :data-key="'app/' + key" @focus="($event) => {
+                            let keys = []
+                            $event.target.onkeydown = (e) => {
+                                e.preventDefault()
+                                if (!keys.includes(e.key.toLowerCase())) {
+                                    keys.push(e.key.toLowerCase())
+                                    $event.target.value = keys.join('+').replace('control', 'ctrl').replace(' ', 'space').replace('arrow', '')
+                                }
+                            }
+                        }" @blur="($event) => {
+                            $event.target.onkeydown = null
+                            config.hotKey[key].app = $event.target.value
+                            registeAppHotkey()
+                        }">
+                        <input type="text" :value="value.global" :data-key="'global/' + key" @focus="($event) => {
+                            let keys = []
+                            $event.target.onkeydown = (e) => {
+                                e.preventDefault()
+                                if (!keys.includes(e.key.toLowerCase())) {
+                                    keys.push(e.key.toLowerCase())
+                                    $event.target.value = keys.join('+').replace('control', 'ctrl').replace(' ', 'space').replace('arrow', '')
+                                }
+                            }
+                        }" @blur="($event) => {
+                            $event.target.onkeydown = null
+                            config.hotKey[key].global = $event.target.value
+                            registeGlobalHotKey()
+                        }">
+                    </div>
+                </div>
+                <div class="r">
+                    <button @click="restoreHotKey()">恢复默认</button>
+                </div>
+            </div>
+        </div>
+        <div class="plugin view">
+            <h2 class="t">插件</h2>
             <div class="group">
                 <div class="r">
-                    <div class="t">定时内存回收</div>
-                    <Switch />
+                    <div class="t">安装的桌面播放器插件</div>
+                    <button @click="queryAppPlugin">刷新插件</button>
+                    <button @click="openPluginDir">打开插件文件夹</button>
+                </div>
+                <div class="desktopplayer-plugins g-shell-5" v-if="pluginList?.desktopPlayer?.length">
+                    <div class="dp" v-for="plugin in pluginList?.desktopPlayer" :class="{hl:plugin?.packEntryName === config?.desktopPlayerPackName}" @click="config = {key:'desktopPlayerPackName',value:plugin.packEntryName}">
+                        <img :src="plugin?.iconUrl" alt="">
+                        <h3>{{ plugin?.name }}</h3>
+                        <span v-if="plugin?.author">由{{ plugin?.author}}制作</span>
+                    </div>
                 </div>
             </div>
         </div>
-
         <div class="about view">
             <h2 class="t">关于</h2>
             <div class="group">
@@ -255,14 +383,14 @@
                     NekoPlayer 使用 MIT 协议开源
                 </div>
                 <div class="r">
-                    0.4.4b
+                    0.6.4
                 </div>
             </div>
         </div>
     </div>
 </template>
 <script setup>
-import { ref } from 'vue';
+import { onActivated, ref } from 'vue';
 import Switch from '@/components/element/Switch.vue'
 import { watch } from 'vue';
 import { Icon } from '@iconify/vue';
@@ -275,33 +403,35 @@ import VueSlider from 'vue-slider-component';
 import ColorThief from 'colorthief';
 import { onBeforeRouteLeave } from 'vue-router';
 import { logout } from '@/api/auth';
+import { showConfirmDialog } from '@/components/notification/use_notification';
+import { registeAppHotkey, registeGlobalHotKey, restoreHotKey } from '@/lib/hotkey';
+import { player } from '@/main';
 const profile = computed(() => {
     return store.state.profile
 })
 const theme = computed({
     get: () => store.state.theme,
-    set: ({ key, value }) => store.commit('updateTheme', { key: key, value: value })
+    set: ({ key, value }) => {
+        store.commit('updateTheme', { key: key, value: value });
+        setTheme({ key, value })
+    }
 })
 
 const zhFonts = ref([])
 const mainColorOfCustomImage = ref([])
 const cacheUsage = ref(0)
-const config = computed({
+const pluginList = ref({})
+let config = computed({
     get: () => store.state.config,
-    set: ({ key, value }) => { store.commit('config', { key, value }) }
+    set: ({ key, value }) => {
+        store.commit('config', { key, value })
+    }
 })
-
 function loadFonts() {
-    getLocalFonts().then(fonts => {
+    window.queryLocalFonts().then(fonts => {
         zhFonts.value = fonts
     })
 }
-onMounted(async () => {
-    Promise.resolve().then(() => {
-        loadFonts()
-        getCacheUsage()
-    })
-})
 async function selectImage() {
     const file = await window.api.dialogOpenFile({
         filters: [
@@ -312,13 +442,48 @@ async function selectImage() {
         theme.value = { key: 'backgroundImage', value: file[0].replace(/\\/g, '/') }
     }
 }
+async function selectVideo() {
+    const file = await window.api.dialogOpenFile({
+        title:"选择视频",
+        filters: [
+            { name: '视频文件', extensions: ['mp4', 'avi', 'webm','3gp','wmv','mkv'] }
+        ]
+    })
+    if (file && file[0]) {
+        theme.value = { key: 'backgroundVideo', value: file[0].replace(/\\/g, '/') }
+    }
+}
 async function selectCacheFolder() {
     const dir = await window.api.dialogOpenDir({
-        title: "选择缓存文件夹"
+        title: "选择缓存文件夹",
+        defaultPath: config.value.cachePath
     })
     if (dir) {
+        let lastDir = config.value.cachePath
         config.value = { key: "cachePath", value: dir }
         getCacheUsage()
+
+        const remove = await showConfirmDialog("修改缓存路径", `您刚刚修改了缓存路径，在之前的路径${lastDir}可能存有很多缓存文件，您可以自己清除或者点击下方清理按钮`, [{
+            label: "取消",
+            act: 'cancel'
+        }, {
+            label: "清理",
+            act: 'clear',
+            style: 'strong'
+        }])
+
+        if (remove === 'clear') {
+            window.electron.ipcRenderer.invoke("file:clearDir", lastDir)
+        }
+    }
+}
+async function selectDownloadFolder() {
+    const dir = await window.api.dialogOpenDir({
+        title: "选择下载文件夹",
+        defaultPath: config.value.downloadPath
+    })
+    if (dir) {
+        config.value = { key: "downloadPath", value: dir }
     }
 }
 async function getCacheUsage() {
@@ -329,7 +494,6 @@ async function getMainColorFromImage(e) {
     const color = await cf.getPalette(e.target)
     mainColorOfCustomImage.value = color.slice(0, 5)
 }
-
 onBeforeRouteLeave((_, __, next) => {
     localStorage.setItem("neko_config", JSON.stringify(config.value))
     console.log("已保存")
@@ -337,10 +501,36 @@ onBeforeRouteLeave((_, __, next) => {
     next()
 
 })
+function clearCache() {
+    showConfirmDialog("确定要清除缓存吗", "目录下的文件将被删除，请确保没有其他文件！").then(async choice => {
+        if (choice === 'yes') {
+            const clear = await window.electron.ipcRenderer.invoke("file:clearDir", config.value?.cachePath)
+            getCacheUsage()
+            player.clearAudioCache()
+        }
+        else {
+            return
+        }
+    })
+}
+async function queryAppPlugin(){
+    pluginList.value = await window.electron.ipcRenderer.invoke("plugin:getplugins")
+}
+async function openPluginDir() {
+    const pluginDir = await window.electron.ipcRenderer.invoke("plugin:getpluginDir")
+    pluginDir && window.electron.ipcRenderer.send("shell:openExplorer",pluginDir)
+}
+onActivated(()=>{
+    Promise.resolve().then(() => {
+        loadFonts()
+        getCacheUsage()
+        queryAppPlugin()
+    })
+})
 </script>
 <style scoped>
 .view {
-    width: 92%;
+    width: 90%;
     height: fit-content;
     display: flex;
     flex-direction: column;
@@ -377,7 +567,7 @@ onBeforeRouteLeave((_, __, next) => {
 .group {
     width: 100%;
     height: fit-content;
-    background: var(--component);
+    background: var(--component-diff);
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
@@ -386,6 +576,7 @@ onBeforeRouteLeave((_, __, next) => {
     box-shadow: var(--shadow);
     border-radius: var(--br-1);
     animation: group-in 0.3s cubic-bezier(0.215, 0.610, 0.355, 1);
+    backdrop-filter: blur(3px);
 
     .t {
         font-size: 1.1rem;
@@ -437,6 +628,14 @@ onBeforeRouteLeave((_, __, next) => {
 
     }
 
+    .ch {
+        .color {
+            outline: var(--strong) 3px solid;
+        }
+
+        pointer-events: none;
+    }
+
     .theme {
         width: 6rem;
         height: auto;
@@ -449,6 +648,8 @@ onBeforeRouteLeave((_, __, next) => {
         .color {
             width: 100%;
             height: 4rem;
+            border-radius: var(--br-1);
+            position: relative;
         }
 
     }
@@ -573,6 +774,67 @@ onBeforeRouteLeave((_, __, next) => {
         }
     }
 
+    .video-preview {
+        display: flex;
+        flex-direction: row;
+        gap: 2rem;
+
+        .use-video {
+            width: fit-content;
+            height: fit-content;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+
+            .preview {
+                width: 16rem;
+                height: 10rem;
+                overflow: hidden;
+                display: flex;
+                background-color: var(--ui);
+            }
+
+            video {
+                width: 100%;
+                transform-origin: center center;
+                transition: .3s;
+            }
+
+            .set-video-mode {
+                display: flex;
+                flex-direction: row;
+                width: 100%;
+                justify-content: space-between;
+                gap: 1rem;
+
+                select {
+                    min-width: 0;
+                    flex: 1;
+                }
+
+                button {
+                    background: var(--strong);
+                }
+            }
+        }
+
+        .video-adjust {
+            display: flex;
+            flex-direction: column;
+            flex: 0.8;
+            font-size: 1rem;
+            gap: 1.1rem;
+
+            .slider {
+                display: flex;
+                flex-direction: row;
+
+                span {
+                    width: 5rem;
+                }
+            }
+        }
+    }
 }
 
 select {
@@ -639,6 +901,89 @@ button {
     .sign {
         color: var(--text-o-4);
         font-size: 0.9rem;
+    }
+}
+
+.hotkey-tab {
+    width: 50%;
+    min-width: 35rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+
+    .function {
+        width: 100%;
+
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1rem;
+        align-items: center;
+
+        input {
+            width: 8rem;
+            height: 2rem;
+            background: var(--component-diff);
+            border: 1px solid var(--border);
+            outline: none;
+            color: var(--text-o-1);
+            box-sizing: border-box;
+            padding: 0.2rem 0.6rem;
+            cursor: pointer;
+            font-size: 1.1rem;
+            border-radius: var(--br-1);
+        }
+
+        input:focus {
+            outline: 1px solid var(--strong);
+            background: var(--strong);
+            color: white;
+        }
+
+        input:hover {
+            outline: 1.6px solid var(--strong);
+
+        }
+    }
+}
+.desktopplayer-plugins {
+    gap: 1rem !important;
+    width: 100%;
+    .dp {
+        width: 10rem;
+        height: 10rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: var(--ui);
+        border-radius: var(--br-1);
+        box-shadow: var(--shadow);
+        padding: 0.5rem;
+
+        img {
+            width:10rem;
+            height: 5rem;
+            object-fit: contain;
+            border-radius: var(--br-1);
+            margin-bottom: 0.5rem;
+        }
+
+        h3 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-o-1);
+            text-align: center;
+        }
+
+        span {
+            font-size: 0.9rem;
+            color: var(--text-o-4);
+            text-align: center;
+        }
+    }
+    .hl{
+        outline: var(--strong) 2px solid;
+        pointer-events: none;
     }
 }
 </style>

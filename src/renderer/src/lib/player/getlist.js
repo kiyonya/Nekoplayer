@@ -1,4 +1,5 @@
 
+import { getProgramDetail } from "@/api/program";
 import { getSongDetial } from "@/api/song";
 import { localMusic, player } from "@/main";
 
@@ -26,8 +27,10 @@ export async function getList(listIds){
     const uncached = listIds.filter(i=>!cacheMap.has(i.id))
     const ncmSongs = uncached.filter(i => i?.source?.type !== "localgroup").map(i => i.id);
     const localSongs = uncached.filter(i => i?.source?.type === "localgroup").map(i => i.id);
+    const voiceSongs = uncached.filter(i=>i?.source?.type === "voicelist").map(i=>i.id)
     ncmSongs.length > 0 && await processNcmSongs(ncmSongs, 100, time);
     localSongs.length > 0 && await processLocalSongs(localSongs, time);
+    voiceSongs.length > 0 && await processNcmVoice(voiceSongs,1)
     let result = []
     for(let id of listIds.map(i=>i.id)){
         result.push(cacheMap.get(id))
@@ -47,6 +50,24 @@ async function processNcmSongs(ids, batchSize = 100, timestamp) {
         for(let song of detials){
             cacheMap.set(song?.id,song)
         }
+    }
+}
+async function processNcmVoice(ids,batchSize = 1) {
+    ids = ids.map(id=>getProgramDetail(id))
+    let datas = (await Promise.all(ids)).map(i=>{
+        return {
+            name:i?.program?.mainSong?.name,
+            al: {
+                picUrl:i?.program?.coverUrl
+            },
+            ar: i?.program?.mainSong?.artists,
+            local:false,
+            voice:true,
+            id:i?.program?.id
+        }
+    })
+    for(let song of datas){
+        cacheMap.set(song?.id,song)
     }
 }
 async function processLocalSongs(ids, timestamp) {

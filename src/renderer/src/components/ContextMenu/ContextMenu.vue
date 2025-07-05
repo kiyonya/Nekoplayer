@@ -110,6 +110,7 @@ function handelClick(item) {
   align-items: center;
   align-content: center;
   gap: 0.3rem;
+  cursor: pointer;
 }
 
 .menu-item:hover {

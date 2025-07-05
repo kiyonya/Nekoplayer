@@ -1,5 +1,5 @@
 import { matchSongsOnNcm } from '@/api/song'
-import { showMessageNotification } from '@/components/notification/use_notification'
+import { showMessageNotification, showSideNotification } from '@/components/notification/use_notification'
 import Dexie from 'dexie'
 const { createHash, randomUUID } = require('crypto')
 
@@ -40,7 +40,31 @@ export class LocalMusic {
   async deleteGroup(groupId) {
     await this.localDB.table('group').where('groupId').equals(groupId).delete()
   }
-
+  async renameGroup(groupId, newName) {
+    let time = Date.now()
+    await this.localDB
+      .table('group')
+      .where('groupId')
+      .equals(groupId)
+      .modify((group) => {
+        group.detail.name = newName
+        group.detail.updatedAt = time
+      })
+    return time
+  }
+  async isGroupStared(groupId){
+    const group = await this.localDB.table('group').where('groupId').equals(groupId).first()
+    return group?.detail?.star || false
+  }
+  async starGroup(groupId,star) {
+    await this.localDB.table('group')
+      .where('groupId')
+      .equals(groupId)
+      .modify((group) => {
+        group.detail.star = star
+        group.detail.updatedAt = Date.now()
+      })
+    }
   async getGroups() {
     const groups = await this.localDB.table('group').toArray()
     return groups.map((group) => ({
@@ -76,7 +100,6 @@ export class LocalMusic {
     if (song?.data?.cover) {
       let coverUnit8Array = null
       if (typeof song?.data?.cover === 'string') {
-
         const blob = await fetch(song.data?.cover).then((res) => res.blob())
         coverUnit8Array = new Uint8Array(await blob.arrayBuffer())
       } else {
@@ -94,6 +117,27 @@ export class LocalMusic {
 
       return coverUnit8Array
     }
+  }
+  async removeGroupCover(groupId) {
+    await this.localDB
+      .table('group')
+      .where('groupId')
+      .equals(groupId)
+      .modify((group) => {
+        group.cover = null
+        group.detail.updatedAt = Date.now()
+      })
+  }
+  async clearGroup(groupId){
+    await this.localDB
+      .table('group')
+      .where('groupId')
+      .equals(groupId)
+      .modify((group) => {
+        group.songs = []
+        group.cover = null
+        group.detail.updatedAt = Date.now()
+      })
   }
   async addSong(songpath, groupId) {
     await this.localDB
@@ -156,7 +200,7 @@ export class LocalMusic {
     return await this.openGroup(groupId)
   }
 
-  deleteSongFile(songpath,md5,groupId) {
+  deleteSongFile(songpath, md5, groupId) {
     return new Promise((resolve, reject) => {
       window.api
         .deleteFile(songpath)
@@ -202,9 +246,10 @@ export class LocalMusic {
     await this.localDB.table('group').clear()
   }
 
-  async importDir(groupId, dirpath,drfile = null) {
+  async importDir(groupId, dirpath, drfile = null) {
+    let close = showSideNotification("正在导入音乐","这可能会花费一点时间，请不要关闭",null)
     let result = null
-    if(!drfile && dirpath){
+    if (!drfile && dirpath) {
       result = await window.api.readDir(dirpath, ['.mp3', '.flac', '.wav'], true)
     }
     if (result?.success || drfile) {
@@ -286,9 +331,9 @@ export class LocalMusic {
             size,
             time,
             cover: rawMata.picture ? rawMata.picture[0].data : matchedMeta?.album?.picUrl,
-            codec:rawMata?.codec,
+            codec: rawMata?.codec,
             bitrate: rawMata?.bitrate,
-            lossless: rawMata?.lossless,
+            lossless: rawMata?.lossless
           }
         } else {
           //没有匹配
@@ -315,9 +360,9 @@ export class LocalMusic {
             size,
             time,
             cover: rawMata.picture ? rawMata.picture[0].data : null,
-            codec:rawMata?.codec,
+            codec: rawMata?.codec,
             bitrate: rawMata?.bitrate,
-            lossless: rawMata?.lossless,
+            lossless: rawMata?.lossless
           }
         }
       }
@@ -343,13 +388,14 @@ export class LocalMusic {
             }
           }
         })
-
+      close()
       return importResult
     }
+    
   }
 
   async importFiles(groupId, files) {
-    const result = await this.importDir(groupId,null,files)
+    const result = await this.importDir(groupId, null, files)
     return result
   }
   async getSongsDataByMd5(md5 = []) {
@@ -363,21 +409,23 @@ export class LocalMusic {
     return songs
   }
   /**
-   * 
-   * @param {Array} files 
+   *
+   * @param {Array} files
    */
-  async checkFileExists(songs){
+  async checkFileExists(songs) {
     const map = new Map()
-    for(let i of songs){
-      map.set(i.path,i.md5)
+    for (let i of songs) {
+      map.set(i.path, i.md5)
     }
-    const loss = await window.api.fileExists(songs.map(i=>i.path))
-    if(!loss){return null}
+    const loss = await window.api.fileExists(songs.map((i) => i.path))
+    if (!loss) {
+      return null
+    }
     const lossMd5 = []
-    for(let path of loss){
+    for (let path of loss) {
       lossMd5.push({
         path,
-        md5:map.get(path)
+        md5: map.get(path)
       })
     }
     return lossMd5
@@ -426,112 +474,112 @@ export class LocalMusic {
     }
   }
 
-  async setLocalLyricFromFile(md5,nlofile = null){
+  async setLocalLyricFromFile(md5, nlofile = null) {
     const file = nlofile || (await window.api.dialogOpenFile())[0]
-    if(file){
-        const buffer = await window.api.readFileBuffer(file)
-        if(buffer.exists){
-            const bf = Buffer.from(buffer.buffer)
-            try{
-                const obj = JSON.parse(bf.toString())
-                await this.setLocalLyric(md5,obj).then(()=>{
-                  showMessageNotification("歌词已设置",1000)
-                })
-            }catch(e){}
-        }
+    if (file) {
+      const buffer = await window.api.readFileBuffer(file)
+      if (buffer.exists) {
+        const bf = Buffer.from(buffer.buffer)
+        try {
+          const obj = JSON.parse(bf.toString())
+          await this.setLocalLyric(md5, obj).then(() => {
+            showMessageNotification('歌词已设置', 1000)
+          })
+        } catch (e) {}
+      }
     }
   }
   /**
-   * 
-   * @param {Array<String>} files 
+   *
+   * @param {Array<String>} files
    * @returns {Promise<Array<object>> }
    */
-  async getLocalMusicMatchedDetial(files){
-     let meta = await window.api.audioMetaReader(files)
-     meta = meta.filter((i) => i.success)
-      let metaMd5Index = {}
-      meta.forEach((i) => {
-        metaMd5Index[i.hash] = i
-      })
+  async getLocalMusicMatchedDetial(files) {
+    let meta = await window.api.audioMetaReader(files)
+    meta = meta.filter((i) => i.success)
+    let metaMd5Index = {}
+    meta.forEach((i) => {
+      metaMd5Index[i.hash] = i
+    })
 
-      const matchList = meta.map((i) => {
-        return {
-          title: i?.meta.title || '',
-          artist: i?.meta?.artist || '',
-          album: i?.meta?.album || '',
-          duration: i?.meta?.duration || 0,
-          persistId: i.hash
-        }
-      })
+    const matchList = meta.map((i) => {
+      return {
+        title: i?.meta.title || '',
+        artist: i?.meta?.artist || '',
+        album: i?.meta?.album || '',
+        duration: i?.meta?.duration || 0,
+        persistId: i.hash
+      }
+    })
 
-      const matches = await matchSongsOnNcm(matchList)
-      let matchMd5Index = {}
-      for (let i in matches?.result?.ids) {
-        matchMd5Index[matches?.result?.ids[i]] = matches?.result?.songs[i]
-      }
-      let result = {}
-      const matchedMd5 = Object.keys(matchMd5Index)
-      for (let md5 of Object.keys(metaMd5Index)) {
-        const path = metaMd5Index[md5].path
-        const size = metaMd5Index[md5].size
-        const time = metaMd5Index[md5].time
-        if (matchedMd5.includes(md5)) {
-          //成功匹配
-          const matchedMeta = matchMd5Index[md5]
-          const rawMata = metaMd5Index[md5]?.meta
-          result[md5] = {
-            name: matchedMeta?.name,
-            artist: matchedMeta?.artists,
-            album: { ...matchedMeta?.album, matched: true },
-            path,
-            id: matchedMeta?.id,
-            md5,
-            tns: matchedMeta?.tns || null,
-            alias: matchedMeta?.alias || null,
-            type: 'local',
-            local: true,
-            duration: rawMata?.duration,
-            mv: matchedMeta?.mv,
-            matched: true,
-            file: path,
-            size,
-            time,
-            cover: rawMata.picture ? rawMata.picture[0].data : matchedMeta?.album?.picUrl,
-            codec:rawMata?.codec,
-            bitrate: rawMata?.bitrate,
-            lossless: rawMata?.lossless,
-          }
-        } else {
-          //没有匹配
-          const rawMata = metaMd5Index[md5]?.meta
-          result[md5] = {
-            name: rawMata?.title || path.split('\\').pop().split('.').slice(0, -1).join('.'),
-            artist: rawMata?.artists
-              ? rawMata?.artists.map((i) => {
-                  return { name: i, matched: false, id: null }
-                })
-              : [{ name: '未知', matched: false, id: null }],
-            album: { name: rawMata?.album, matched: false, id: null, picUrl: null },
-            path,
-            id: md5,
-            md5,
-            tns: null,
-            alias: null,
-            type: 'local',
-            local: true,
-            duration: rawMata?.duration,
-            mv: null,
-            matched: false,
-            file: path,
-            size,
-            time,
-            cover: rawMata.picture ? rawMata.picture[0].data : null,
-            codec:rawMata?.codec,
-            bitrate: rawMata?.bitrate,
-            lossless: rawMata?.lossless,
-          }
+    const matches = await matchSongsOnNcm(matchList)
+    let matchMd5Index = {}
+    for (let i in matches?.result?.ids) {
+      matchMd5Index[matches?.result?.ids[i]] = matches?.result?.songs[i]
+    }
+    let result = {}
+    const matchedMd5 = Object.keys(matchMd5Index)
+    for (let md5 of Object.keys(metaMd5Index)) {
+      const path = metaMd5Index[md5].path
+      const size = metaMd5Index[md5].size
+      const time = metaMd5Index[md5].time
+      if (matchedMd5.includes(md5)) {
+        //成功匹配
+        const matchedMeta = matchMd5Index[md5]
+        const rawMata = metaMd5Index[md5]?.meta
+        result[md5] = {
+          name: matchedMeta?.name,
+          artist: matchedMeta?.artists,
+          album: { ...matchedMeta?.album, matched: true },
+          path,
+          id: matchedMeta?.id,
+          md5,
+          tns: matchedMeta?.tns || null,
+          alias: matchedMeta?.alias || null,
+          type: 'local',
+          local: true,
+          duration: rawMata?.duration,
+          mv: matchedMeta?.mv,
+          matched: true,
+          file: path,
+          size,
+          time,
+          cover: rawMata.picture ? rawMata.picture[0].data : matchedMeta?.album?.picUrl,
+          codec: rawMata?.codec,
+          bitrate: rawMata?.bitrate,
+          lossless: rawMata?.lossless
+        }
+      } else {
+        //没有匹配
+        const rawMata = metaMd5Index[md5]?.meta
+        result[md5] = {
+          name: rawMata?.title || path.split('\\').pop().split('.').slice(0, -1).join('.'),
+          artist: rawMata?.artists
+            ? rawMata?.artists.map((i) => {
+                return { name: i, matched: false, id: null }
+              })
+            : [{ name: '未知', matched: false, id: null }],
+          album: { name: rawMata?.album, matched: false, id: null, picUrl: null },
+          path,
+          id: md5,
+          md5,
+          tns: null,
+          alias: null,
+          type: 'local',
+          local: true,
+          duration: rawMata?.duration,
+          mv: null,
+          matched: false,
+          file: path,
+          size,
+          time,
+          cover: rawMata.picture ? rawMata.picture[0].data : null,
+          codec: rawMata?.codec,
+          bitrate: rawMata?.bitrate,
+          lossless: rawMata?.lossless
         }
       }
-      return result
+    }
+    return result
   }
 }

@@ -18,11 +18,11 @@
       <!-- 其他登录方式，手机验证码登录 -->
       <div class="phone-login">
         <div class="selector">
-          <span :class="{'hl':loginMethod == 0}" @click="loginMethod = 0">短信登录</span>
-          <span :class="{'hl':loginMethod == 1}" @click="loginMethod = 1">密码登录</span>
+          <span :class="{ 'hl': loginMethod == 0 }" @click="loginMethod = 0">短信登录</span>
+          <span :class="{ 'hl': loginMethod == 1 }" @click="loginMethod = 1">密码登录</span>
         </div>
         <!-- 短信 -->
-        <div  v-if="loginMethod == 0" class="mth">
+        <div v-if="loginMethod == 0" class="mth">
           <input type="text" name="" placeholder="请输入手机号" v-model="loginAsCaptcha.phone">
           <div class="code">
             <input type="text" placeholder="请输入验证码" v-model="loginAsCaptcha.captcha">
@@ -31,7 +31,7 @@
           <button class="dologin" @click="phoneAndCaptchaLogin">登录</button>
         </div>
         <!-- 密码 -->
-        <div  v-if="loginMethod == 1" class="mth">
+        <div v-if="loginMethod == 1" class="mth">
           <input type="text" placeholder="请输入手机号" v-model="loginAsPassword.phone">
           <div class="password">
             <input type="text" placeholder="请输入密码" v-model="loginAsPassword.password">
@@ -40,20 +40,20 @@
           </div>
           <button class="dologin" @click="phoneAndPasswordLogin">登录</button>
         </div>
-        
+
 
         <!-- 更多 -->
-         <div class="more">
+        <div class="more">
           <span class="more-tip tip">使用其他方式登录</span>
 
           <div class="more-icon">
             <!-- 图标 -->
-            <Icon icon="majesticons:mail" class="i"/>
-             <span>网易邮箱</span>
+            <Icon icon="majesticons:mail" class="i" />
+            <span>网易邮箱</span>
           </div>
 
 
-         </div>
+        </div>
 
       </div>
 
@@ -65,7 +65,7 @@
 </template>
 <script setup>
 import ModalWindow from './windows/ModalWindow.vue'
-import { getQRKey, getQRImg, checkQR, sendCaptcha, login,cellphoneLogin } from '../api/auth'
+import { getQRKey, getQRImg, checkQR, sendCaptcha, login, cellphoneLogin } from '../api/auth'
 import { store } from '@/store'
 import { ref } from 'vue'
 import { computed } from 'vue'
@@ -110,7 +110,7 @@ function getQRcodeLogin() {
         qrmsg.value = '登录成功'
         clearInterval(qrChecker)
         resolve(qrStatus.cookie)
-        closeWindow()
+
       }
     }, 1000)
   })
@@ -120,7 +120,12 @@ function loginAsQRCode() {
   getQRcodeLogin()
     .then((cookie) => {
       localStorage.setItem("@cookie", cookie)
-      login(cookie)
+      login(cookie).then((s) => {
+        if (s) {
+          closeWindow()
+        }
+
+      })
     })
     .catch(() => {
       loginAsQRCode()
@@ -133,9 +138,10 @@ async function getCaptcha() {
   const phone = loginAsCaptcha.value.phone
   if (!phone) { return }
   const data = await sendCaptcha(phone)
-  if (!data?.data) { 
+  if (!data?.data) {
     alert(data?.message)
-    return }
+    return
+  }
   captchaFreeze.value = 60
   let timer = setInterval(() => {
     if (captchaFreeze.value <= 0) {
@@ -151,7 +157,7 @@ async function phoneAndCaptchaLogin() {
   const captcha = loginAsCaptcha.value.captcha
   if (!phone || !captcha || captcha.length !== 4) { return }
   const loginAuth = await cellphoneLogin({
-    phone,captcha
+    phone, captcha
   })
   console.log(loginAuth)
 }
@@ -161,7 +167,7 @@ async function phoneAndPasswordLogin() {
   const password = loginAsPassword.value.password
   if (!phone || !password) { return }
   const loginAuth = await cellphoneLogin({
-    phone,password
+    phone, password
   })
   console.log(loginAuth)
 }
@@ -192,17 +198,19 @@ function closeWindow() {
   padding: 1rem 1rem;
   gap: 1rem;
 }
-.gp{
+
+.gp {
   width: 1px;
   height: 100%;
   margin-top: auto;
   margin-bottom: auto;
- background: var(--text-o-4);
- border-radius: 1px;
- opacity: 0.1;
- 
+  background: var(--text-o-4);
+  border-radius: 1px;
+  opacity: 0.1;
+
 }
-input{
+
+input {
   background: var(--ui-light);
   box-sizing: border-box;
   padding: 0.8rem 0.8rem;
@@ -214,10 +222,12 @@ input{
   outline: none;
   letter-spacing: 1px;
 }
-input:focus{
+
+input:focus {
   outline: var(--strong) solid 2px;
 }
-button{
+
+button {
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -230,23 +240,26 @@ button{
   border-radius: var(--br-1);
   color: white;
 }
-.title{
+
+.title {
   font-size: 1.2rem;
 }
-.tip{
+
+.tip {
   color: var(--text-o-4);
   font-size: 0.9rem;
   text-align: center;
   opacity: 0.7;
 }
-.qr-login{
+
+.qr-login {
   display: flex;
   flex-direction: column;
   gap: 1.7rem;
   align-items: center;
   width: 30%;
 
-  .qr-img-container{
+  .qr-img-container {
     width: 12rem;
     height: 12rem;
     position: relative;
@@ -260,7 +273,7 @@ button{
     background-color: var(--ui-dark);
   }
 
-  .qrcode{
+  .qrcode {
     width: 100%;
     height: 100%;
     z-index: 1;
@@ -268,65 +281,69 @@ button{
   }
 }
 
-.phone-login{
+.phone-login {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
 
-  .hl{
+  .hl {
     font-weight: 600;
   }
-  
-  .selector{
+
+  .selector {
     display: flex;
     flex-direction: row;
     gap: 2rem;
     font-size: 1.1rem;
   }
-  .mth{
+
+  .mth {
     display: flex;
     flex-direction: column;
     gap: 0.8rem;
     width: 22rem;
   }
-  .password{
+
+  .password {
     display: flex;
     flex-direction: row;
     justify-content: space-between;
     gap: 0.5rem;
 
-    input{
+    input {
       flex: 1;
     }
   }
-  .code{
+
+  .code {
     display: flex;
     flex-direction: row;
     justify-content: space-between;
     gap: 0.5rem;
-    
+
     height: fit-content;
-    button{
+
+    button {
       height: 100%;
       min-width: 6rem;
     }
 
-    input{
+    input {
       flex: 1;
     }
   }
-  
-  .dologin{
+
+  .dologin {
     font-size: 1.1rem;
     letter-spacing: 1px;
   }
 
-  .more{
+  .more {
     display: flex;
     flex-direction: column;
     margin-top: 0.5rem;
 
-    .more-tip{
+    .more-tip {
       width: 100%;
       text-align: center;
       display: flex;
@@ -334,26 +351,29 @@ button{
       gap: 0.8rem;
       align-items: center;
     }
-    .more-tip::before,::after{
+
+    .more-tip::before,
+    ::after {
       content: '';
       flex: 1;
       height: 1px;
       background: rgba(255, 255, 255, 0.301);
     }
 
-    .more-icon{
-      .i{
+    .more-icon {
+      .i {
         width: 1.5em;
         height: 1.5em;
         padding: 0.5rem;
         background: var(--ui-light);
-        border-radius:var(--br-1);
+        border-radius: var(--br-1);
       }
+
       width: fit-content;
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap:0.3rem ;
+      gap:0.3rem;
       font-size: small;
       color: var(--text-o-3);
       margin-top: 1rem;

@@ -1,26 +1,13 @@
 <template>
-  <div
-    class="re-song"
-    @click="play"
-    :class="this.$store.state.musicInfo.id == this.id ? 'onplay' : ''"
-  >
+  <div class="re-song" @click="play" :class="this.$store.state.musicInfo.id == this.id ? 'onplay' : ''">
     <img :src="this.cover + '?param=75y75'" alt="" class="music-cover" />
     <div class="song-info">
       <p class="song-name">{{ this.name }}</p>
       <ArtistNameGroup :array="this.artist" style="max-width: 12rem" class="artist"></ArtistNameGroup>
     </div>
 
-    <ContextMenu :menu="[
-      {label:'播放',act:'play',icon:'ion:play'},
-      {label:'添加到下一首',act:'addnext',icon:'material-symbols-light:add-notes'},
-      'hr',
-      {label:'喜欢',act:'like',icon:'ri:hearts-fill'},
-      {label:'收藏',act:'collect',icon:'fluent:collections-20-filled'},
-      {label:'复制链接',act:'copylink',icon:'tabler:link'},
-      {label:'复制ID',act:'copyid',icon:'tabler:number'},
-      {label:'浏览器打开',act:'browser',icon:'mdi:web'},
-      ]" @select="contextMenuSelected">
-      </ContextMenu>
+    <ContextMenu :menu="menu" @select="(act) => {$emit('menu', { name: name, id: id }, act);menuHandler(act)}">
+    </ContextMenu>
   </div>
 </template>
 <script>
@@ -28,51 +15,77 @@ import ArtistNameGroup from './ArtistNameGroup.vue'
 import ContextMenu from './ContextMenu/ContextMenu.vue';
 export default {
   components: {
-    ArtistNameGroup,ContextMenu
+    ArtistNameGroup, ContextMenu
   },
   data() {
     return {}
   },
-  emits:['play'],
+  emits: ['play', 'menu'],
   methods: {
     play() {
-     this.$emit("play",this.id)
+      this.$emit("play", this.id)
     },
-    contextMenuSelected(item){
+    menuHandler(item) {
+      if(!this.defaultMenuHandler){return}
       const act = item?.act
       const actions = {
-        play:()=>{
+        play: () => {
           this.play()
         },
-        browser:()=>{
+        browser: () => {
           const url = `https://music.163.com/#/song?id=${this.id}`
-          window.electron.ipcRenderer.send('app:openWebView',url)
+          window.electron.ipcRenderer.send('app:openWebView', url)
         },
-        copylink:()=>{
+        copylink: () => {
           const url = `https://music.163.com/#/song?id=${this.id}`
           window.navigator.clipboard.writeText(url)
           showMessageNotification("已复制")
         },
-        copyid:()=>{
+        copyid: () => {
           window.navigator.clipboard.writeText(this.id)
           showMessageNotification("已复制")
         }
       }
-      if(actions[act]){
+      if (actions[act]) {
         actions[act]()
       }
     },
   },
-  props: ['cover', 'name', 'artist', 'id']
+  props: {
+    cover: {
+    },
+    name: {},
+    artist: {
+      type: Array
+    },
+    id: {},
+    menu: {
+      type: Array,
+      default: [
+        { label: '播放', act: 'play', icon: 'ion:play' },
+        { label: '添加到下一首', act: 'addnext', icon: 'material-symbols-light:add-notes' },
+        'hr',
+        { label: '喜欢', act: 'like', icon: 'ri:hearts-fill' },
+        { label: '收藏', act: 'collect', icon: 'fluent:collections-20-filled' },
+        { label: '复制链接', act: 'copylink', icon: 'tabler:link' },
+        { label: '浏览器打开', act: 'browser', icon: 'mdi:web' },
+      ]
+    },
+    defaultMenuHandler:{
+      type:Boolean,
+      default:true
+    }
+  }
 }
 </script>
 <style scoped>
 @keyframes song-in {
-  from{
+  from {
     opacity: 0;
     transform: translateY(10px);
   }
 }
+
 .re-song {
   width: 100%;
   height: 100%;
@@ -84,11 +97,13 @@ export default {
   align-items: center;
   cursor: pointer;
   scroll-snap-align: start;
-  animation:  song-in .6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  animation: song-in .6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
-.onplay{
+
+.onplay {
   outline: 5px solid var(--strong) !important;
 }
+
 .re-song:hover {
   box-shadow: 1px 1px 10px #00000013;
   background-color: var(--hover);
@@ -135,7 +150,8 @@ export default {
   opacity: var(--color-comp-opacity);
   fill: var(--color-comp);
 }
-.artist{
+
+.artist {
   font-size: 0.9rem;
   color: var(--text-o-4);
 }

@@ -18,7 +18,6 @@
 <script>
 import VideoPlayer from '@/components/VideoPlayer.vue'
 import * as req_mv from '../api/mv'
-import temp from '@/store/temp'
 import { formatNumber } from '@/utils/libs'
 export default {
   components: {
@@ -33,7 +32,6 @@ export default {
   methods: {
     async loadMv(id) {
       this.data = (await req_mv.getMvDetial(id)).data
-      console.log(this.data)
     },
     formatNumber
   },
@@ -42,9 +40,6 @@ export default {
     window.scrollTo({ top: 0 })
   },
   props: ['id'],
-  mounted() {
-    temp.audio.pause()
-  }
 }
 </script>
 <style scoped>

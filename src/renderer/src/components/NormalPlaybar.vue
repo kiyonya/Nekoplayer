@@ -79,7 +79,6 @@
 </template>
 <script setup>
 import ArtistNameGroup from './ArtistNameGroup.vue'
-import temp from '@/store/temp'
 import { store } from '@/store'
 import { resize } from '@/utils/imageProcess'
 import { Icon } from '@iconify/vue'
@@ -89,7 +88,6 @@ import { player } from '@/main'
 import { ref } from 'vue'
 import ListentogetherControl from './ListentogetherCreate.vue'
 import { getMainColorFromImage } from '@/utils/color'
-import { mmss } from '@/utils/timers'
 const showListentogetherControl = ref(false)
 const bgColor = ref([])
 const audioState = computed(()=>{

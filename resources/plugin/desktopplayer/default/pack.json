@@ -1,0 +1,23 @@
+{
+  "name": "NEKOPLAYER经典",
+  "author": "kiyuu",
+  "version": "0.3.5",
+  "icon": "icon.png",
+  "description":"默认的播放器样式，提供基本功能",
+  "thumbnail": [],
+  "devMode":false,
+  "devOptions":{
+    "port":9090,
+    "devTool":true
+  },
+  "entry":"index.html",
+  "electronWindowOptions": {
+    "width": 420,
+    "height": 150,
+    "resizable": false,
+    "show": false,
+    "frame": false,
+    "autoHideMenuBar": true,
+    "transparent": true
+  }
+}

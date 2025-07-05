@@ -40,7 +40,6 @@ import { computed } from 'vue';
 import ModalWindow from './windows/ModalWindow.vue'
 import { store } from '@/store';
 import VueSlider from 'vue-slider-component';
-import temp from '@/store/temp';
 const useEQ = computed({
   get:()=>store.state.config.useEQ,
   set:(val)=>store.commit('config',{key:'useEQ',value:val})

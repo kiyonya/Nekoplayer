@@ -28,25 +28,10 @@
           tns: song.tns || null,
           alia: song.alia,
           mv: song.mv
-        }" :index="chunk?.start + index" @play="playTracks" @browser-open="browserOpen" v-if="chunk?.data?.length">
+        }" :index="chunk?.start + index" @play="playTracks" v-if="chunk?.data?.length">
         </Song>
       </div>
     </div>
-    <!-- 
-    <div class="cards" v-if="trackDisplayMode === 'card'">
-      <MusicCardNormal v-for="(song, index) in tracks" :source="{ type: 'playlist', id: pid }" :trackDetial="{
-        name: song.name,
-        cover: song.al.picUrl,
-        artist: song.ar,
-        album: song.al,
-        id: song.id,
-        duration: song.dt,
-        tns: song.tns || null,
-        alia: song.alia,
-        mv: song.mv
-      }" :index="index" @play="playTracks"></MusicCardNormal>
-    </div>
-    -->
   </div>
 </template>
 <script setup>
@@ -54,11 +39,12 @@ import { getPlaylistDetial } from '../../api/playlist'
 import Song from '@/components/Song.vue'
 import { getDate } from '@/utils/timers'
 import HeadInfo from '@/components/HeadInfo.vue'
-import { player } from '@/main'
-import { ref, onMounted, onUnmounted, nextTick } from 'vue'
+import { player, toolkit } from '@/main'
+import { ref, onMounted, onUnmounted, nextTick, onDeactivated } from 'vue'
 import { useRoute } from 'vue-router'
 import { getSongDetial } from '@/api/song'
-import { cachePlaylistIds, getPlaylistIds } from './cache'
+import { cachePlaylistIds, getPlaylistIds } from '@/views/playlist/cache'
+import { showMessageNotification } from '@/components/notification/use_notification'
 let detail = ref({})
 let pid = ref(0)
 let isLoading = ref(false)
@@ -164,7 +150,7 @@ onMounted(async () => {
           loaderObserver.observe(chunk)
         }
       }
-      else{
+      else {
         throw new Error("no base dom")
       }
     })
@@ -186,9 +172,6 @@ onUnmounted(() => {
 })
 function playTracks(id) {
   player.playPlaylist(id, null, { type: 'playlist', id: pid.value })
-}
-function browserOpen(url) {
-  window.electron.ipcRenderer.send('app:openWebView', url)
 }
 </script>
 <style scoped>

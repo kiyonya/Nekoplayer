@@ -25,7 +25,7 @@ body {
   overflow: hidden;
   color: var(--text);
   user-select: none;
-  font-family: 'misans';
+  font-family: 'app-font';
 }
 
 .app-view {
@@ -40,7 +40,11 @@ body {
   z-index: 1;
 }
 
-
+.pt{
+ width: 93%;
+    font-size: 2rem;
+  
+}
 
 
 
@@ -165,8 +169,18 @@ button:active {
   .g-shell-5 {
     grid-template-columns: repeat(4, 1fr) !important;
   }
-}
 
+  .g-shell-4{
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+}
+.g-shell-4{
+  width: 100%;
+  height: fit-content;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 15px 30px;
+}
 
 .g-shell-6 {
   width: 100%;

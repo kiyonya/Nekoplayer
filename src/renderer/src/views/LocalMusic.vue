@@ -5,8 +5,6 @@
       <button @click="showGroupCreator = true"> 创建</button>
       <button> 目录</button>
     </div>
-    <button @click="createGroup">创建测试</button>
-    <button @click="clear">清除所有</button>
     <div class="groups g-shell-6">
       <div class="group" v-for="group in groups"
         @click="$router.push({ name: 'LocalMusicGroup', params: { id: group.groupId } })" :key="group.groupId">
@@ -14,13 +12,19 @@
           <img :src="getCover(group?.cover)" alt="" class="cover" v-if="group?.cover">
           <div class="no-cover" v-if="!group.cover" :style="{ background: getRandomLinearGradient() }">
           </div>
-          <Icon icon="material-symbols:star-rounded" class="stared" v-if="group?.detail?.star"/>
+          <Icon icon="material-symbols:star-rounded" class="stared" v-if="group?.detail?.star" />
         </div>
         <h2 class="name">{{ group?.detail?.name }}</h2>
         <span class="count">共 {{ group?.songCount }} 首</span>
+
+        <ContextMenu :menu="[
+          { label: '重命名', act: 'rename', icon: 'fluent:rename-16-regular' },
+          { label: group?.detail?.star ? '取消星标' : '设为星标', act: 'star', icon: 'material-symbols:star-rounded' },
+          { label: '删除音乐集', act: 'del', icon: 'material-symbols:delete-outline' }
+        ]" @select="(s) => handleGroupContextMenu(group?.groupId, s)" />
       </div>
     </div>
-    <ModalWindow  v-if="showGroupCreator" @close="showGroupCreator = false" :title="'创建本地音乐集'">
+    <ModalWindow v-if="showGroupCreator" @close="showGroupCreator = false" :title="'创建本地音乐集'">
       <span class="modal-window-tip-span">请输入音乐集名称</span>
       <input type="text" class="modal-window-input" v-model="createGroupConfig.name">
       <div class="modal-window-display-flex-row-temp">
@@ -46,6 +50,8 @@ import ModalWindow from '@/components/windows/ModalWindow.vue';
 import { ref } from 'vue';
 import { Icon } from '@iconify/vue';
 import { onActivated } from 'vue';
+import ContextMenu from '@/components/ContextMenu/ContextMenu.vue';
+import { showConfirmDialog, showInputConfirmDialog } from '@/components/notification/use_notification';
 
 const showGroupCreator = ref(false)
 const groups = ref([])
@@ -58,7 +64,6 @@ onActivated(() => {
 
 })
 function createGroup() {
-  console.log(createGroupConfig)
   if (createGroupConfig.value.name) {
     localMusic.createGroup(createGroupConfig.value).then(group => {
       groups.value.push(group)
@@ -77,7 +82,6 @@ function createGroup() {
 function load() {
   localMusic.getGroups().then((res) => {
     groups.value = res
-    console.log(res)
   })
 
 }
@@ -105,6 +109,49 @@ function getRandomLinearGradient() {
   return `linear-gradient(${angle}deg, ${color1}, ${color2})`;
 }
 
+async function handleGroupContextMenu(gid, e) {
+  if (e.act === 'rename') {
+    changeGroupName(gid)
+  } else if (e.act === 'star') {
+    let isStared = await localMusic.isGroupStared(gid)
+    if (isStared) {
+      localMusic.starGroup(gid, false)
+    }
+    else {
+      localMusic.starGroup(gid, true)
+    }
+    modifyGroupDetial(gid, 'star', !isStared)
+  }
+  else if (e.act === 'del') {
+    let choice = await showConfirmDialog("删除音乐集", "确定要删除这个音乐集吗，这不会删除本地文件,但是这个音乐集可能会消失很久,真的很久.......")
+    if (choice === 'yes') {
+      localMusic.deleteGroup(gid).then(() => {
+        for (let i in groups.value) {
+          if (groups.value[i].groupId === gid) {
+            groups.value.splice(i, 1)
+          }
+        }
+      })
+    }
+  }
+}
+async function changeGroupName(gid) {
+  let input = await showInputConfirmDialog("重命名音乐集", "请输入音乐集名称")
+  if (input?.act === 'yes') {
+    let name = input?.value
+    let time = await localMusic.renameGroup(gid, name)
+    modifyGroupDetial(gid, 'name', name, time)
+  }
+}
+
+function modifyGroupDetial(groupId, key, value, time) {
+  for (let group of groups.value) {
+    if (group.groupId === groupId) {
+      group.detail[key] = value,
+        group.detail.updated = time || Date.now()
+    }
+  }
+}
 </script>
 <style scoped>
 .page {
@@ -196,7 +243,7 @@ function getRandomLinearGradient() {
     margin-right: auto;
   }
 
-  .stared{
+  .stared {
     font-size: 2.5rem;
     color: gold;
     position: absolute;
@@ -204,7 +251,4 @@ function getRandomLinearGradient() {
     top: 0.3rem;
   }
 }
-
-
-
 </style>

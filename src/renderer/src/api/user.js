@@ -3,7 +3,7 @@ const cookie = localStorage.getItem('neko_user_cookie') || undefined
 
 export async function getUserPlaylist(uid) {
   const data = await request({
-    url: `/user/playlist?uid=${uid}`,
+    url: `/user/playlist?uid=${uid}&timestamp=${Date.now()}`,
     method: 'post',
     body: {
       cookie: cookie
@@ -25,7 +25,7 @@ export async function getUserPlaylist(uid) {
 
 export async function getUserCollectedAlbums() {
   const data = await request({
-    url: `/album/sublist`,
+    url: `/album/sublist?timestamp=${Date.now()}`,
     method: 'post',
     body: {
       cookie: cookie
@@ -36,7 +36,7 @@ export async function getUserCollectedAlbums() {
 
 export async function getUserCollectedMV() {
   const data = await request({
-    url: `/mv/sublist`,
+    url: `/mv/sublist?timestamp=${Date.now()}`,
     method: 'post',
     body: {
       cookie: cookie
@@ -47,7 +47,7 @@ export async function getUserCollectedMV() {
 
 export async function getUserRecentListen(uid, type = 1) {
   const data = await request({
-    url: `/user/record?uid=${uid}&type=${type}`,
+    url: `/user/record?uid=${uid}&type=${type}&timestamp=${Date.now()}`,
     method: 'post',
     body: {
       cookie: cookie
@@ -59,7 +59,7 @@ export async function getUserRecentListen(uid, type = 1) {
 
 export async function getUserLikes(uid) {
   const data = await request({
-    url: `/likelist?uid=${uid}`,
+    url: `/likelist?uid=${uid}&timestamp=${Date.now()}`,
     method: 'post',
     body: {
       cookie: cookie

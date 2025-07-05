@@ -20,6 +20,7 @@
         }"
         :index="index"
         @play="playSongs"
+        @menu="trackMenuSelected"
       ></Song>
     </div>
     <div class="view" v-if="view === 'albums'">
@@ -31,11 +32,14 @@
           :cover="al.picUrl"
           :id="al.id"
           :hideInfo="true"
+          :date="al?.publishTime"
           @playall="
             (id) => {
               player.playAlbum(null, null, { type: 'album', id: id }, true)
             }
+          
           "
+          @menu="albumCardMenuSelected"
         >
         </AlbumCard>
       </div>
@@ -64,7 +68,9 @@ import AlbumCard from '@/components/AlbumCard.vue'
 import MvCard from '@/components/MvCard.vue'
 import { onMounted } from 'vue'
 import { nextTick } from 'vue'
-import { player } from '@/main'
+import { player, toolkit } from '@/main'
+import router from '@/router'
+import { showMessageNotification } from '@/components/notification/use_notification'
 const view = ref('')
 const id = ref(0)
 const artistName = ref('')
@@ -148,6 +154,61 @@ onMounted(() => {
 function playSongs(trackId) {
   let source = { type: 'artist', id: id.value }
   player.playArtist(trackId, player.automap(songs.value, source), source)
+}
+function albumCardMenuSelected({ name, id } = _, item) {
+  const act = item?.act
+  const actions = {
+    open: () => {
+      router.push({ name: "Album", params: { id: id } })
+    },
+    playall:()=>{
+      player.playAlbum(null, null, { type: 'album', id: id}, true)
+    },
+    browser: () => {
+      const url = `https://music.163.com/#/album?id=${id}`
+      window.electron.ipcRenderer.send('app:openWebView', url)
+    },
+    copylink: () => {
+      const url = `https://music.163.com/#/album?id=${id}`
+      window.navigator.clipboard.writeText(url)
+      showMessageNotification("已复制")
+    },
+  }
+  if (actions[act]) {
+    actions[act]()
+  }
+}
+function trackMenuSelected(track,item) {
+  let _id = track?.id
+  let name = track?.name
+  const act = item?.act
+  let source = { type: 'artist', id: id.value }
+  const actions = {
+    play: () => {
+      playSongs(_id)
+    },
+    addnext: () => {
+      player.addTrackToNext(_id, source)
+    },
+    browser: () => {
+      const url = `https://music.163.com/#/song?id=${_id}`
+      window.electron.ipcRenderer.send('app:openWebView', url)
+    },
+    copylink: () => {
+      const url = `https://music.163.com/#/song?id=${_id}`
+      window.navigator.clipboard.writeText(url)
+      showMessageNotification("已复制")
+    },
+    downloadlyric: () => {
+      toolkit.downloadLyric(_id,name)
+    },
+    downloadNloLyric: () => {
+      toolkit.downloadNloLyric(_id,name)
+    }
+  }
+  if (actions[act]) {
+    actions[act]()
+  }
 }
 </script>
 <style scoped>
