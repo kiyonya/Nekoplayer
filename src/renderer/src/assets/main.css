@@ -32,12 +32,16 @@ body {
   height: calc(100vh - var(--top-bar-height));
   width: calc(100% - var(--side-bar-width));
   display: flex;
-  flex-direction: row;
   position: absolute;
   left: var(--side-bar-width);
   top: var(--top-bar-height);
+  padding-bottom: 5rem;
   color: var(--text);
   z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow-y: scroll;
 }
 
 .pt{
@@ -73,10 +77,14 @@ button:active {
 }
 
 .page {
-  display: flex;
+  /* display: flex;
   flex-direction: column;
   align-items: center;
   margin-top: 0;
+  flex: 1;
+  height: fit-content;
+  overflow-y: auto;
+  height: 100%; */
 }
 
 .page * {

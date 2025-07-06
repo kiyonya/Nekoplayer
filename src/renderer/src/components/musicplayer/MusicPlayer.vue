@@ -327,6 +327,9 @@ const listentogetherRoomDetial = computed(() => {
 const isListentogether = computed(() => {
   return store.state.inListentogetherRoom
 })
+const backgroundImageResolution = computed(() => {
+  return store.state.config.musicPlayerBackgroundImageResolution
+})
 const lyricContainer = ref(null)
 const dynamic = ref(null)
 const vinyl = ref(null)
@@ -386,7 +389,7 @@ onMounted(async () => {
             next: highlightSentence?.next
           })
         }
-        requestIdleCallback(() => lyricScroller.scroll(index + 1))
+        lyricScroller.scroll(index + 1)
       }
       const dynamicWaveDraw = () => {
         if (playerCoverDisplayType.value !== 'wave') return
@@ -420,7 +423,7 @@ onMounted(async () => {
       }, 200);
       dynamicWaveDraw()
       const musicInfoWatcher = watch(musicInfo, () => {
-        mainCover.src = musicInfo.value.cover?.startsWith("https") ? musicInfo.value.cover + "?param=3y3" : musicInfo.value.cover
+        mainCover.src = musicInfo.value.cover?.startsWith("https") ? musicInfo.value.cover + "?param=50y50&type=webp" : musicInfo.value.cover
         lyricScroller.reset()
         coverTransition.value = true
         setTimeout(() => {
@@ -428,13 +431,16 @@ onMounted(async () => {
         }, 200)
         if (musicInfo.value?.type === "voice") {
           loadVoiceDetail(musicInfo.value.id)
-        }else{
+        } else {
           programDetail.value = {}
         }
       }, { immediate: true })
       cleanupFunctions.push(musicInfoWatcher)
     }
-    Promise.resolve().then(mainProcess())
+    nextTick(() => {
+      mainProcess()
+    })
+
   } catch (error) {
     throw new Error("音乐播放器初始化失败: " + error.message)
   }
@@ -446,7 +452,7 @@ onUnmounted(() => {
   window.webFrame.clearCache()
 })
 function loadVoiceDetail(programId) {
-  getProgramDetail(programId).then(data=>{
+  getProgramDetail(programId).then(data => {
     programDetail.value = data?.program
   })
 }
@@ -1248,10 +1254,10 @@ button:hover {
 }
 
 
-.program-detail{
+.program-detail {
   margin-top: auto;
   margin-bottom: auto;
-  height:80%;
+  height: 80%;
   width: 100%;
   display: flex;
   flex-direction: column;
@@ -1259,7 +1265,7 @@ button:hover {
   gap: 1rem;
   overflow-y: auto;
 
-  .radio{
+  .radio {
     display: flex;
     flex-direction: row;
     box-sizing: border-box;
@@ -1268,41 +1274,46 @@ button:hover {
     border-radius: var(--br-2);
     gap: 1rem;
     align-items: center;
-    img{
+
+    img {
       width: 5rem;
       height: 5rem;
       aspect-ratio: 1/1;
       border-radius: var(--br-2);
     }
-    .radio-detail{
+
+    .radio-detail {
       display: flex;
       flex-direction: column;
       gap: 0.5rem;
       height: fit-content;
       justify-content: center;
     }
-    
-    h2{
+
+    h2 {
       font-size: 1.2rem;
     }
-    .tags{
+
+    .tags {
       display: flex;
       flex-direction: row;
       gap: 1rem;
-      .tag{
+
+      .tag {
         font-size: 0.9rem;
         box-sizing: border-box;
         padding: 0.2rem 0.6rem;
         background: rgba(255, 255, 255, 0.15);
         border-radius: var(--br-1);
       }
-      .tag:hover{
+
+      .tag:hover {
         background: rgba(255, 255, 255, 0.25)
       }
     }
   }
 
-  .desc{
+  .desc {
     display: flex;
     flex-direction: column;
     box-sizing: border-box;
@@ -1311,24 +1322,14 @@ button:hover {
     border-radius: var(--br-2);
     gap: 0.5rem;
 
-    .ti{
+    .ti {
       font-size: 1.5rem;
       font-weight: bold;
     }
 
-    p{
+    p {
       color: var(--text-o-2);
     }
   }
 }
-
-
-
-
-
-
-
-
-
-
 </style>

@@ -377,14 +377,7 @@
         <div class="about view">
             <h2 class="t">关于</h2>
             <div class="group">
-                <div class="r">
-                    感谢您使用喵喵播放器，虽然还有很多很多不足，希望您可以反馈给我，再次衷心感谢您的信任与支持！
-                    <br>
-                    NekoPlayer 使用 MIT 协议开源
-                </div>
-                <div class="r">
-                    0.6.4
-                </div>
+                <span>当前版本 {{ store.state.appInfo.version }}</span>
             </div>
         </div>
     </div>

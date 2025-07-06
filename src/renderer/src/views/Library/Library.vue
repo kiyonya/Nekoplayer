@@ -201,7 +201,7 @@ onUnmounted(() => {
 .shell {
   display: flex;
   flex-direction: column;
-  width: 90%;
+  width: 93%;
   height: fit-content;
 }
 
@@ -211,7 +211,7 @@ onUnmounted(() => {
 }
 
 .selector {
-  width: 90%;
+  width: 93%;
   display: flex;
   flex-direction: row;
   gap: 1rem;
@@ -252,7 +252,7 @@ onUnmounted(() => {
 }
 
 .head {
-  width: 90%;
+  width: 93%;
   height: 17rem;
   display: flex;
   flex-direction: row;
@@ -339,7 +339,7 @@ onUnmounted(() => {
 }
 
 .viewer {
-  width: 90%;
+  width: 93%;
 }
 
 .viewer .grid {

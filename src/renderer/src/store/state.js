@@ -2,7 +2,10 @@ import { defaultAudioStatus, defaultConfig, defaultEqualizerData, defaultPlayerD
 
 export default {
   standBy:false,
-  appInfo:{},
+  appInfo:{
+    version:"0.8.5",
+    dev:true
+  },
   isLogin:false,
   online:false,
   equalizerData: JSON.parse(localStorage.getItem('neko_equalizerData')) || defaultEqualizerData,

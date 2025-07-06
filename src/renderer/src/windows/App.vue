@@ -21,17 +21,28 @@
     <NormalPlaybar v-if="!['DesktopLyric', 'MV'].includes($route.name) && store.state.musicInfo.id"></NormalPlaybar>
 
     <SideBar></SideBar>
-    <div class="app-view">
 
-      <router-view v-slot="{ Component }" @scroll="debounceScroll($event)" ref="routerView" >
+
+    <router-view v-slot="{ Component }" class="app-view" id="__appview__">
+        <keep-alive
+          :include="['Recommend', 'LocalMusic', 'Artist', 'Library', 'Search', 'Comment', 'LocalMusicGroup', 'Setting', 'Radio', 'PlaylistSquare', 'PlaylistCategory', 'SearchDetail','Playlist']"
+          :max="20">
+          <component :is="Component" :key="$route.fullPath" />
+        </keep-alive>
+    </router-view>
+
+
+    <!-- <div class="app-view">
+      <router-view v-slot="{ Component }">
         <transition name="slide" mode="out-in">
           <KeepAlive :max="20"
             :include="['Recommend', 'LocalMusic', 'Artist', 'Library', 'Search', 'Comment', 'LocalMusicGroup', 'Setting', 'Radio', 'PlaylistSquare', 'PlaylistCategory', 'SearchDetail']">
-            <component :is="Component" class="router-view" :key="$route.fullPath" />
+            <component :is="Component" id="__appview__"/>
           </KeepAlive>
         </transition>
       </router-view>
-    </div>
+    </div> -->
+
 
     <Transition name="fade">
       <PlaylistBar v-if="store.state.showPlaylistBar"></PlaylistBar>
@@ -47,7 +58,7 @@
     </button>
 
     <Transition name="relax-fade">
-    <Relax v-if="store.state.standBy" @close="store.commit('standByMode',false)"/>
+      <Relax v-if="store.state.standBy" @close="store.commit('standByMode', false)" />
     </Transition>
 
   </div>
@@ -72,18 +83,9 @@ const theme = computed({
   get: () => store.state.theme
 })
 const showToTop = ref(false)
-const debounceScroll = debounce((e) => {
-  store.commit('updateScroll', e.target.scrollTop)
-  if (e.target.scrollTop > window.innerHeight) {
-    showToTop.value = true
-  } else {
-    showToTop.value = false
-  }
-}, 100, false)
 function totop() {
   document.querySelector('.router-view').scrollTo({ top: 0, behavior: 'smooth' })
 }
-
 if (location.href.startsWith("file")) {
   router.push({ name: "Recommend" })
 }
@@ -91,8 +93,8 @@ if (location.href.startsWith("file")) {
 <style>
 .router-view {
   flex: 1;
-  height: 100%;
-  overflow-y: scroll;
+  height: fit-content;
+  overflow-y: auto;
 }
 
 @keyframes viewer-in {
@@ -223,13 +225,16 @@ if (location.href.startsWith("file")) {
 .relax-fade-leave-active {
   transition: all 0.3s ease-in-out;
 }
+
 .relax-fade-enter-from,
 .relax-fade-leave-to {
   transform: translateY(-100%);
 }
+
 .relax-fade-enter-to,
 .relax-fade-leave-from {
   transform: translateY(0);
 }
 
+.router {}
 </style>

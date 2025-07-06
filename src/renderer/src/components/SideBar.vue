@@ -35,9 +35,9 @@
         <Icon icon="mingcute:settings-3-line" class="icon tosetting" />
         <span>设置</span>
       </RouterLink>
-      <button class="route" @click="openDev" title="如果你看到了这个，说明你正在使用开发版，这个版本可能包含很多意想不到的问题，很多功能仍在处于测试，请注意。（单击以打开开发者工具）">
+      <button class="route" @click="openDev" title="如果你看到了这个，说明你正在使用开发版，这个版本可能包含很多意想不到的问题，很多功能仍在处于测试，请注意。（单击以打开开发者工具）" v-if="store.state.appInfo.dev">
         <Icon icon="mdi:dev-to" class="icon" />
-        <b style="color:green;background: none;">dev 0.8.2</b>
+        <b style="color:orange;background: none;">DEV{{ store.state.appInfo.version }}</b>
       </button>
     </div>
 

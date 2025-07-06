@@ -62,29 +62,6 @@
         </div>
       </div>
     </div>
-    <!-- <div class="body row" v-if="isLogin">
-      <div class="shell simi-recommend">
-        <h2 class="ti">根据「{{ simiRecommendBaseSong?.name }}」为您推荐</h2>
-        <div class="simi-recommends">
-          <Song_Small v-for="song in simiRecommend?.slice(0, deviceScreenSize < 1 ? 3 : 6)" :name="song?.name"
-            :cover="song?.album?.picUrl" :artist="song?.artists" :id="song?.id" @play="
-              playSimiRecommendSongs
-            ">
-          </Song_Small>
-        </div>
-      </div>
-    </div> -->
-
-    <div class="body row"></div>
-
-
-
-
-
-
-
-
-
     <div class="body recommend-playlist">
       <h2 class="ti">推荐歌单</h2>
       <div class="recommend-playlists">
@@ -122,11 +99,18 @@
         </div>
       </div>
     </div>
-    <div class="body row artist-new">
-      <div class="artist-new-card">
-
-
-
+    <div class="body  artist-new">
+      <h2 class="ti">关注艺人新专辑</h2>
+      <div class="artist-new-album g-shell-6">
+        <AlbumCard 
+        v-for="al in subscribeArtistsNewAlbum?.slice(0, deviceScreenSize < 1 ? 5 : 6)"
+        :name="al?.blockTitle?.resourceName"
+        :cover="al?.blockTitle?.imgUrl"
+        :size="al?.albumSongCount"
+        :id="al?.albumId"
+        :key="al?.albumId"
+        :date="al?.publishTime"
+        ></AlbumCard>
       </div>
     </div>
 
@@ -135,7 +119,6 @@
 <script setup>
 import { getDailySong, getRadio, getHomepageBlock, getUserStylePreference, getUserSubArtistsNewAlbum } from '@/api/recommend'
 import { nextTick, onActivated } from 'vue'
-import { onBeforeMount } from 'vue'
 import { ref } from 'vue'
 import { Icon } from '@iconify/vue'
 import {
@@ -152,6 +135,12 @@ import { getColor } from '@/components/musicplayer/color'
 import { createLinearGradient } from '@/utils/imageProcess'
 import router from '@/router'
 import { getMainColorFromImage } from '@/utils/color'
+import { paralleTask } from '@/utils/lazyload'
+import { watch } from 'vue'
+import { onDeactivated } from 'vue'
+import { onMounted } from 'vue'
+import { showMessageNotification } from '@/components/notification/use_notification'
+import AlbumCard from '@/components/AlbumCard.vue'
 const date = ref({
   month: 1,
   date: 1
@@ -169,7 +158,6 @@ const isLogin = computed(() => {
   return store.state.isLogin
 })
 const dailySongs = ref([])
-const recentLikes = ref([])
 const officialPlaylist = ref([])
 const simiRecommendBaseSong = ref({})
 const simiRecommend = ref([])
@@ -178,18 +166,11 @@ const recommendPlaylist = ref([])
 const homepageStyleRCMD = ref({})
 const userStyle = ref([])
 const redSimiSongs = ref([])
-const subArtistsUpdate = ref([])
-import { paralleTask } from '@/utils/lazyload'
-import { watch } from 'vue'
-import { onDeactivated } from 'vue'
-import { onMounted } from 'vue'
-import { onUnmounted } from 'vue'
-import { watchEffect } from 'vue'
-import { showMessageNotification } from '@/components/notification/use_notification'
+const subscribeArtistsNewAlbum = ref([])
+
 async function getWebApiRecommendPlaylist() {
   const data = await getRecommendPlaylist()
   recommendPlaylist.value = data?.result.slice(1)
-
 }
 async function getHomepageStyleRecommend(rf = false) {
   const data = await getHomepageBlock("HOMEPAGE_BLOCK_STYLE_RCMD", 0, rf)
@@ -223,7 +204,7 @@ async function getRedSimilar(rf = false) {
 }
 async function load() {
 
-  const tasks = [
+  let tasks = [
     async () => {
       getDailySong().then((data) => {
         dailySongs.value = data?.data?.dailySongs
@@ -266,10 +247,18 @@ async function load() {
         });
       })
     },
+    async ()=>{
+      if (!isLogin.value) { return }
+      getUserSubArtistsNewAlbum(6).then((data) => {
+        console.log(data?.data?.newWorks)
+        subscribeArtistsNewAlbum.value = data?.data?.newWorks
+      })
+    }
   ]
 
   Promise.resolve().then(paralleTask(tasks, 1)).then(()=>{
-    window.gc && window.gc()
+    tasks = null;
+
   })
 
 }
@@ -355,7 +344,6 @@ function miniTrackMenuSelected({name,id} = _,item,playHandler) {
 
   .style-rcmd-detial .songs {
     grid-template-columns: repeat(4, 1fr) !important;
-    grid-template-rows: repeat(5, 1fr) !important;
   }
 
   .head .recent-like-list .ctn {
@@ -378,7 +366,7 @@ function miniTrackMenuSelected({name,id} = _,item,playHandler) {
 }
 
 .head {
-  width: 90%;
+  width: 93%;
   height: 12rem;
   display: flex;
   flex-direction: row;
@@ -387,7 +375,7 @@ function miniTrackMenuSelected({name,id} = _,item,playHandler) {
 }
 
 .body {
-  width: 90%;
+  width: 93%;
   height: fit-content;
 }
 
@@ -849,7 +837,6 @@ function miniTrackMenuSelected({name,id} = _,item,playHandler) {
   flex-direction: row;
   height: auto;
   gap: 1.5rem;
-  margin-top: 1.5rem;
 
   .style {
     width: 100%;
@@ -889,7 +876,6 @@ function miniTrackMenuSelected({name,id} = _,item,playHandler) {
     width: 100%;
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    grid-template-rows: repeat(5, 1fr);
     gap: 1.5rem 1rem;
   }
 
@@ -918,5 +904,11 @@ function miniTrackMenuSelected({name,id} = _,item,playHandler) {
   grid-template-columns: repeat(3, 1fr);
   gap: 1.5rem 1rem;
 
+}
+.artist-new{
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 1rem;
 }
 </style>

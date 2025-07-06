@@ -1,7 +1,7 @@
 <template>
   <div class="top">
     <div class="top-bar" :class="{'no-drag':!isFocus}">
-      <button @click="router.back()">
+      <button @click="back">
         <Icon icon="icon-park-outline:left"  />
       </button>
       <div class="search" :class="{ 'search-focus': isFocus }" ref="searchContainer">
@@ -225,6 +225,9 @@ function maximize() {
 }
 function desktopPlayer(){
    window.electron.ipcRenderer.send('app:useDesktopPlayer', desktopPlayerPackName.value)
+}
+function back(){
+  window.history.back()
 }
 </script>
 <style scoped>

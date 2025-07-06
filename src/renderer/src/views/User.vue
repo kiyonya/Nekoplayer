@@ -90,7 +90,6 @@ const deviceScreenSize = computed(() => {
 onBeforeMount(() => {
     const id = useRoute().params.id
     getUserDetial(id).then(data => {
-        console.log(data)
         detial.value = data
         profile.value = data?.profile
         if (profile.value.gender === 1) {
@@ -99,25 +98,18 @@ onBeforeMount(() => {
         if (profile.value.gender === 0) {
             genderPrefix.value = "她"
         }
-        console.log(profile)
-
         if (data?.peopleCanSeeMyPlayRecord) {
             enableRecent.value = true
             getUserRecentListen(id).then(data => {
                 const weekData = data?.weekData.slice(12)
                 weekDataRecord.value = weekData
-                console.log(weekData);
             })
         }
     })
     getUserPlaylist(id).then(data => {
-        console.log(data)
         redHeart.value = data?.create[0]
         createPlaylist.value = data?.create
         collectPlaylist.value = data?.collect
-    })
-    getUserEvent(id).then(data => {
-        console.log(data)
     })
 })
 function getYearsPassed(timestamp) {

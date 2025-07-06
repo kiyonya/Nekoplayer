@@ -77,6 +77,7 @@ const defaultConfig = {
   musicPlayerLyricBlur: true,
   //播放页歌词辉光
   musicPlayerLyricGlow: true,
+  musicPlayerBackgroundImageResolution:50,
   enableDynamicCover: true,
   //record || wave || cover
   playerCoverDisplayType: 'cover',

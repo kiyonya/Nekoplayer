@@ -7,8 +7,8 @@
         }
       " :maininfo="`最后更新于${getDate(info.publishTime)} · ${info.size}首歌`" :info="`©${info.company || null}`"
       :desc="info.description" @descClick="showDesc = true"
-      @playall="player.playAlbum(null, null, { type: 'album', id: id }, true)"
-      @addlist="player.insertAlbumCandy(pid, { type: 'album', id: id })"></HeadInfo>
+      @playall="player.playAlbum(null, null, { type: 'album', id: aid }, true)"
+      @addlist="player.insertAlbumCandy(pid, { type: 'album', id: aid })"></HeadInfo>
 
     <div class="tracks">
       <div class="section" v-for="(value, key, index) in tracks">
@@ -25,7 +25,7 @@
           mv: song.mv
         }" :source="{
             type: 'album',
-            id:id,
+            id:aid,
           }" :index="index" @play="playTrack"></Song_NoCover>
       </div>
     </div>
@@ -57,11 +57,11 @@ import ArtistNameGroup from '@/components/ArtistNameGroup.vue'
 import HeadInfo from '@/components/HeadInfo.vue'
 import { player } from '@/main'
 import ModalWindow from '@/components/windows/ModalWindow.vue'
-
-const props = defineProps(['id'])
+import { useRoute } from 'vue-router'
 const info = ref({})
 const tracks = ref({})
 const showDesc = ref(false)
+const aid = ref("")
 const loadAlbum = async (alid) => {
   try {
     const al = await req_album.getAlbum(alid)
@@ -80,10 +80,12 @@ const loadAlbum = async (alid) => {
   }
 }
 const playTrack = (id) => {
-  player.playAlbum(id, null, { type: 'album', id: props.id })
+  player.playAlbum(id, null, { type: 'album', id: aid.value })
 }
 onMounted(() => {
-  Promise.resolve().then(loadAlbum(props.id))
+  const id = useRoute().params?.id
+  aid.value = id
+  Promise.resolve().then(loadAlbum(id))
 })
 onUnmounted(()=>{
   info.value = null
