@@ -7,6 +7,7 @@
       <div class="playlists g-shell-6">
          <PlaylistCard v-for="playlist in playlists" :name="playlist?.name" :cover="playlist?.coverImgUrl"
             :id="playlist?.id" :key="playlist?.id"
+             @playall="player.playPlaylist(null, null, { type: 'playlist', id: playlist?.id },true)"
             />
 
          <div class="loadmore" ref="loadMore" style="height: 5rem;"></div>
@@ -20,7 +21,7 @@ import { onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import PlaylistCard from '@/components/PlaylistCard.vue';
 import { onUnmounted } from 'vue';
-import { onActivated } from 'vue';
+import { player } from '@/main';
 let isLoading = false
 let cat = ref("")
 let page = 0

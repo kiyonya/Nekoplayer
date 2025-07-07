@@ -129,14 +129,10 @@ function playTracks(id) {
   let source = { type: 'search_recommend_songs_16', id: null }
   player.playNewList(id, songs.value.slice(0, 16).map(i => { return { id: i.id, source } }, source))
 }
-function toDetail(type,key){
-  router
-}
 </script>
 <style scoped>
 .search {
   --page-width: 93%;
-  width:100%;
   padding-top: 2rem;
   display: flex;
   flex-direction: column;

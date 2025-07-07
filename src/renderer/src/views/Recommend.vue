@@ -258,7 +258,7 @@ async function load() {
 
   Promise.resolve().then(paralleTask(tasks, 1)).then(()=>{
     tasks = null;
-
+    webFrame.clearCache()
   })
 
 }
@@ -392,13 +392,6 @@ function miniTrackMenuSelected({name,id} = _,item,playHandler) {
   padding: 1rem;
 }
 
-@keyframes ti-in {
-  from {
-    transform: translateY(20px);
-    opacity: 0;
-  }
-}
-
 .ti {
   font-weight: 600;
   font-size: 1.5rem;
@@ -406,7 +399,6 @@ function miniTrackMenuSelected({name,id} = _,item,playHandler) {
   flex-direction: row;
   align-items: center;
   gap: 1rem;
-  animation: ti-in .3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   color: var(--strong);
 
   button {

@@ -1,7 +1,7 @@
 <template>
   <div class="top">
     <div class="top-bar" :class="{'no-drag':!isFocus}">
-      <button @click="back">
+      <button @click="$router.back()">
         <Icon icon="icon-park-outline:left"  />
       </button>
       <div class="search" :class="{ 'search-focus': isFocus }" ref="searchContainer">

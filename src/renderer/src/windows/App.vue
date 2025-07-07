@@ -24,11 +24,15 @@
 
 
     <router-view v-slot="{ Component }" class="app-view" id="__appview__">
-        <keep-alive
-          :include="['Recommend', 'LocalMusic', 'Artist', 'Library', 'Search', 'Comment', 'LocalMusicGroup', 'Setting', 'Radio', 'PlaylistSquare', 'PlaylistCategory', 'SearchDetail','Playlist']"
-          :max="20">
+      
+      <keep-alive
+        :include="['Recommend', 'LocalMusic', 'Artist', 'Library', 'Search', 'Comment', 'LocalMusicGroup', 'Setting', 'Radio', 'PlaylistSquare', 'PlaylistCategory', 'SearchDetail','DailyRecommend']"
+        :max="20">
+        
           <component :is="Component" :key="$route.fullPath" />
-        </keep-alive>
+        
+      </keep-alive>
+
     </router-view>
 
 
@@ -140,19 +144,12 @@ if (location.href.startsWith("file")) {
   opacity: 1;
 }
 
-.viewer-change-enter-active {}
-
-.viewer-change-leave-active {}
-
 .fade-enter-active,
 .fade-leave-active,
 .fade-enter,
 .fade-leave-to {
   transform: translateX(25rem);
 }
-
-
-
 .app-bg-img {
   width: 100vw;
   height: 100vh;
@@ -174,27 +171,25 @@ if (location.href.startsWith("file")) {
 
 .slide-enter-active,
 .slide-leave-active {
-  transition: all 0.15s cubic-bezier(0.455, 0.03, 0.515, 0.955);
+  transition: all 0.1s ease-out;
+  will-change: transform, opacity;
 }
 
 .slide-enter-from {
-  transform: translateX(20px);
+  transform: translateY(20px);
   opacity: 0;
 }
 
 .slide-leave-to {
-  transform: translateX(-20px);
+  transform: translateY(20px); 
   opacity: 0;
-
 }
-
 /* Player transition styles */
 .player-enter-active,
 .player-leave-active {
   transition: all 0.4s;
-  /* Custom bezier curve for bouncy effect */
+  will-change: transform;
 }
-
 .player-enter-from {
   transform: translateY(100%);
 }

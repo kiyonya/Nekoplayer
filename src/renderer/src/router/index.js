@@ -131,7 +131,10 @@ const router = createRouter({
     {
       name: 'Radio',
       path: '/radio',
-      component: () => import('../views/Radio.vue')
+      component: () => import('../views/Radio.vue'),
+      meta: {
+        savePosition: true,
+      }
     },
     {
       name: 'ArtistWorks',
@@ -139,7 +142,7 @@ const router = createRouter({
       component: () => import('../views/ArtistWorks.vue'),
       meta: {
         savePosition: true,
-        scroll: 0
+
       }
     },
     {

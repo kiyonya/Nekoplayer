@@ -53,16 +53,16 @@
           <Icon icon="humbleicons:volume-2" class="icon1" v-if="volume > 0.75"/>
         </button>
         <VueSlider  :tooltip="'none'" class="volume-slider" width="100px" height="4px"
-        :process-style="{ background: '#fff' }" :rail-style="{ background: '#ffffff60' }" :dot-style="{display:'none'}" :max="1" :min="0" :interval="0.01" v-model="volume">
+        :process-style="{ background: 'var(--text)' }" :rail-style="{ background: 'var(--ui)' }" :dot-style="{display:'none'}" :max="1" :min="0" :interval="0.01" v-model="volume">
         
         </VueSlider>
       </div>
       <button @click.stop="store.commit('showEqualizer',true)">
         <Icon icon="fe:equalizer" class="icon2"/>
       </button>
-      <button @click.stop="showListentogetherControl = true">
+      <!-- <button @click.stop="showListentogetherControl = true">
         <Icon icon="stash:podcast" class="icon2"/>
-      </button>
+      </button> -->
       <button  @click.stop="$router.push({name:'Comment',params:{type:'song'},query:{id:musicInfo.id}})">
         <Icon icon="mdi:comment-processing-outline" class="icon2"/>
       </button>

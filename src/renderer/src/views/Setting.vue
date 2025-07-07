@@ -1,7 +1,6 @@
 <template>
     <div class="page">
-        <div class="page-selector">
-        </div>
+        <div class="page-selector"> </div>
         <div class="common view">
             <h2 class="t">通用</h2>
 
@@ -31,7 +30,7 @@
                     <Switch v-model="config.savePlaylist"></Switch>
                 </div>
             </div>
-             <div class="group">
+            <div class="group">
                 <div class="r">
                     <div class="t">退出行为</div>
                     <select name="" id="" @change="config = { key: 'exitBehavior', value: $event.target.value }"
@@ -204,7 +203,7 @@
                         </div>
                         <div class="slider">
                             <span>视频静音</span>
-                        <Switch v-model="theme.backgroundVideoMute" />
+                            <Switch v-model="theme.backgroundVideoMute" />
                         </div>
                     </div>
                 </div>
@@ -366,10 +365,12 @@
                     <button @click="openPluginDir">打开插件文件夹</button>
                 </div>
                 <div class="desktopplayer-plugins g-shell-5" v-if="pluginList?.desktopPlayer?.length">
-                    <div class="dp" v-for="plugin in pluginList?.desktopPlayer" :class="{hl:plugin?.packEntryName === config?.desktopPlayerPackName}" @click="config = {key:'desktopPlayerPackName',value:plugin.packEntryName}">
+                    <div class="dp" v-for="plugin in pluginList?.desktopPlayer"
+                        :class="{ hl: plugin?.packEntryName === config?.desktopPlayerPackName }"
+                        @click="config = { key: 'desktopPlayerPackName', value: plugin.packEntryName }">
                         <img :src="plugin?.iconUrl" alt="">
                         <h3>{{ plugin?.name }}</h3>
-                        <span v-if="plugin?.author">由{{ plugin?.author}}制作</span>
+                        <span v-if="plugin?.author">由{{ plugin?.author }}制作</span>
                     </div>
                 </div>
             </div>
@@ -377,7 +378,16 @@
         <div class="about view">
             <h2 class="t">关于</h2>
             <div class="group">
-                <span>当前版本 {{ store.state.appInfo.version }}</span>
+                <span>当前版本 v{{ store.state.appInfo.version }} <span v-if="store.state.appInfo.dev"
+                        style="color: orange;">测试开发版</span></span>
+                <div class="refs">
+                    <span @click="openUrl('https://github.com/kiyonya/Nekoplayer')">
+                        <Icon icon="mdi:github" /> NekoPlayer
+                    </span>
+                    <span @click="openUrl('https://github.com/kiyonya/Nekoplayer/blob/master/LICENSE')">MIT
+                        LICENSE</span>
+                    <p @dblclick="HEYYYYY">Made By Kiyuu</p>
+                </div>
             </div>
         </div>
     </div>
@@ -385,11 +395,8 @@
 <script setup>
 import { onActivated, ref } from 'vue';
 import Switch from '@/components/element/Switch.vue'
-import { watch } from 'vue';
 import { Icon } from '@iconify/vue';
 import { setTheme } from '@/lib/theme';
-import { getLocalFonts } from './setting';
-import { onMounted } from 'vue';
 import { computed } from 'vue';
 import { store } from '@/store';
 import VueSlider from 'vue-slider-component';
@@ -399,6 +406,7 @@ import { logout } from '@/api/auth';
 import { showConfirmDialog } from '@/components/notification/use_notification';
 import { registeAppHotkey, registeGlobalHotKey, restoreHotKey } from '@/lib/hotkey';
 import { player } from '@/main';
+import {jsconfetti} from '@/utils/confetti';
 const profile = computed(() => {
     return store.state.profile
 })
@@ -437,9 +445,9 @@ async function selectImage() {
 }
 async function selectVideo() {
     const file = await window.api.dialogOpenFile({
-        title:"选择视频",
+        title: "选择视频",
         filters: [
-            { name: '视频文件', extensions: ['mp4', 'avi', 'webm','3gp','wmv','mkv'] }
+            { name: '视频文件', extensions: ['mp4', 'avi', 'webm', '3gp', 'wmv', 'mkv'] }
         ]
     })
     if (file && file[0]) {
@@ -506,20 +514,29 @@ function clearCache() {
         }
     })
 }
-async function queryAppPlugin(){
+async function queryAppPlugin() {
     pluginList.value = await window.electron.ipcRenderer.invoke("plugin:getplugins")
 }
 async function openPluginDir() {
     const pluginDir = await window.electron.ipcRenderer.invoke("plugin:getpluginDir")
-    pluginDir && window.electron.ipcRenderer.send("shell:openExplorer",pluginDir)
+    pluginDir && window.electron.ipcRenderer.send("shell:openExplorer", pluginDir)
 }
-onActivated(()=>{
+async function openUrl(url) {
+    window.electron.ipcRenderer.send("shell:openExternal", url)
+}
+
+onActivated(() => {
     Promise.resolve().then(() => {
         loadFonts()
         getCacheUsage()
         queryAppPlugin()
     })
 })
+function HEYYYYY() {
+    jsconfetti.addConfetti({
+        emojis: ['🌈', '🐈', '😺', '✨', '🍡', '🌸'],
+    })
+}
 </script>
 <style scoped>
 .view {
@@ -537,7 +554,7 @@ onActivated(()=>{
 }
 
 .view:last-child {
-    margin-bottom: 5rem;
+    margin-bottom: 7rem;
 }
 
 @keyframes group-in {
@@ -938,9 +955,11 @@ button {
         }
     }
 }
+
 .desktopplayer-plugins {
     gap: 1rem !important;
     width: 100%;
+
     .dp {
         width: 10rem;
         height: 10rem;
@@ -954,7 +973,7 @@ button {
         padding: 0.5rem;
 
         img {
-            width:10rem;
+            width: 10rem;
             height: 5rem;
             object-fit: contain;
             border-radius: var(--br-1);
@@ -974,9 +993,35 @@ button {
             text-align: center;
         }
     }
-    .hl{
+
+    .hl {
         outline: var(--strong) 2px solid;
         pointer-events: none;
+    }
+}
+
+.refs {
+    display: flex;
+    flex-direction: row;
+    gap: 1.2rem;
+    align-items: center;
+
+    span {
+        text-decoration: none;
+        color: var(--text-o-2);
+        background: var(--ui);
+        box-sizing: border-box;
+        padding: 0.3rem 0.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: var(--br-1);
+        gap: 0.3rem;
+    }
+
+    span:hover {
+        text-decoration: underline;
+        background: var(--hover);
     }
 }
 </style>

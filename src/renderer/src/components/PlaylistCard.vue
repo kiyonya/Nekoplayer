@@ -105,9 +105,7 @@ export default {
 <style scoped>
 @keyframes playlist-card-in {
   from {
-    transform: translateY(30px);
     opacity: 0;
-    filter: blur(1px);
   }
 }
 .playlist-card {
@@ -116,10 +114,10 @@ export default {
   position: relative;
   display: flex;
   flex-direction: column;
-  animation: playlist-card-in .3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   grid-column: auto;
   grid-row: auto;
   min-width: 0;
+  cursor: pointer;
 
 }
 .playlist-card:hover .blur {

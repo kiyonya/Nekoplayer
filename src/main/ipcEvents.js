@@ -734,6 +734,9 @@ export function registIPC() {
     }
     return pluginResult
   })
+  ipcMain.on("shell:openExternal",(e,url)=>{
+    shell.openExternal(url)
+  })
 }
 
 export function registerTray() {

@@ -35,7 +35,6 @@ body {
   position: absolute;
   left: var(--side-bar-width);
   top: var(--top-bar-height);
-  padding-bottom: 5rem;
   color: var(--text);
   z-index: 1;
   display: flex;

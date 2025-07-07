@@ -3,7 +3,7 @@ import { defaultAudioStatus, defaultConfig, defaultEqualizerData, defaultPlayerD
 export default {
   standBy:false,
   appInfo:{
-    version:"0.8.5",
+    version:"0.9.1",
     dev:true
   },
   isLogin:false,

@@ -99,7 +99,7 @@ const defaultConfig = {
   //缓存
   cachePath: 'D:\\DataPack\\fp',
   downloadPath:"",
-  enableCache: true,
+  enableCache: false,
   /**
    * 最大缓存空间
    * 单位 MB

@@ -82,7 +82,6 @@ export default {
 @keyframes song-in {
   from {
     opacity: 0;
-    transform: translateY(10px);
   }
 }
 
@@ -97,7 +96,7 @@ export default {
   align-items: center;
   cursor: pointer;
   scroll-snap-align: start;
-  animation: song-in .6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  /* animation: song-in .6s cubic-bezier(0.175, 0.885, 0.32, 1.275); */
 }
 
 .onplay {
