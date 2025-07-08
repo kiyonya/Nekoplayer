@@ -16,9 +16,6 @@ const router = createRouter({
       path: '/playlist/:id',
       component: () => import('../views/playlist/Playlist.vue'),
       props: true,
-      meta: {
-        savePosition: true
-      }
     },
     {
       name: 'PlaylistSquare',
@@ -193,6 +190,10 @@ const scrollPositions = new Map();
 const MAX_STORED_POSITIONS = 20;
 const positionKeys = []; 
 router.beforeEach((to, from, next) => {
+
+  console.log(from.matched[0]?.instances)
+
+
   const appView = document.getElementById('__appview__');
   if (from.fullPath && appView && from.meta?.savePosition) {
     if (scrollPositions.has(from.fullPath)) {

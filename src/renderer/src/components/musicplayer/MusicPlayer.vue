@@ -280,6 +280,9 @@ const progress = computed({
     player.seek(time)
   }
 })
+const showPlayer = computed(()=>{
+  return store.state.showPlayer
+})
 const volume = computed({
   get: () => { return store.state.audioState.volume },
   set: (val) => {
@@ -330,36 +333,32 @@ const isListentogether = computed(() => {
 const backgroundImageResolution = computed(() => {
   return store.state.config.musicPlayerBackgroundImageResolution
 })
-const lyricContainer = ref(null)
-const dynamic = ref(null)
-const vinyl = ref(null)
-const dynamicWave = ref(null)
-const coverTransition = ref(false)
-const showTookKit = ref(false)
-const playerKey = ref(Date.now())
-const colorBackground = ref(null)
-const mainCover = document.createElement('img')
+let lyricContainer = ref(null)
+let dynamic = ref(null)
+let dynamicWave = ref(null)
+let coverTransition = ref(false)
+let colorBackground = ref(null)
+let mainCover = document.createElement('img')
 mainCover.crossOrigin = "Anonymous"
-
 // 动画帧ID存储
 let animationFrameIds = {
   waveDraw: null,
   mainProcess: null
 }
 const cleanupFunctions = []
+let unwatch = null
+let lyricScroller, dynamicBackground,dynamicWaveDrawer = null
 onMounted(async () => {
   await nextTick()
   try {
     const mainProcess = () => {
-      const lyricScroller = new LyricScroller(lyricContainer.value, {
+      lyricScroller = new LyricScroller(lyricContainer.value, {
         highlightClassName: 'highlight'
       })
-      let dynamicBackground = null
       if (backgroundMode.value === "dynamic") {
         dynamicBackground = new DynamicBackground(dynamic.value)
 
       }
-      let dynamicWaveDrawer = null
       if (playerCoverDisplayType.value === 'wave') {
         dynamicWaveDrawer = new AudioWaveEffect(dynamicWave.value)
       }
@@ -378,7 +377,7 @@ onMounted(async () => {
           }
         })
       }
-      const scrollLyric = () => {
+      const scrollLyric = (va = true) => {
         const time = player.audioManager.currentTime
         const { index, highlightSentence } = computedHighlight(lyric.value, time)
         if (highlightSentence.gap) {
@@ -389,13 +388,13 @@ onMounted(async () => {
             next: highlightSentence?.next
           })
         }
-        lyricScroller.scroll(index + 1)
+        lyricScroller.scroll(index + 1 ,va)
       }
       const dynamicWaveDraw = () => {
         if (playerCoverDisplayType.value !== 'wave') return
         animationFrameIds.waveDraw = requestAnimationFrame(() => {
           dynamicWaveDraw()
-          if (audioState.value.state === "pause") return
+          if (audioState.value.state === "pause" || !showPlayer.value) return
           dynamicWaveDrawer.draw(player.audioManager.frequencyAnalyser.getByteFrequencyData())
         })
       }
@@ -417,12 +416,12 @@ onMounted(async () => {
           }
         }
       )
-      scrollLyric()
+      // scrollLyric()
       setTimeout(() => {
         dynamicBackground?.start()
       }, 200);
       dynamicWaveDraw()
-      const musicInfoWatcher = watch(musicInfo, () => {
+      unwatch = watch(musicInfo, () => {
         mainCover.src = musicInfo.value.cover?.startsWith("https") ? musicInfo.value.cover + "?param=50y50&type=webp" : musicInfo.value.cover
         lyricScroller.reset()
         coverTransition.value = true
@@ -435,7 +434,16 @@ onMounted(async () => {
           programDetail.value = {}
         }
       }, { immediate: true })
-      cleanupFunctions.push(musicInfoWatcher)
+
+      let showplayerWatcher = watch(showPlayer,(n,o)=>{
+        if(showPlayer.value){
+          dynamicBackground.candraw = true
+          scrollLyric(false)
+        }
+        else{
+          dynamicBackground.candraw = false
+        }
+      })
     }
     nextTick(() => {
       mainProcess()
@@ -447,8 +455,18 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
+  lyricScroller = null
+  dynamicBackground = null
+  dynamicWaveDrawer = null
+  unwatch && unwatch()
   cleanupFunctions.forEach(cleanup => cleanup?.())
   cleanupFunctions.length = 0
+  lyricContainer = null
+  dynamic = null
+  dynamicWave = null
+  coverTransition = null
+  colorBackground = null
+  mainCover?.remove()
   window.webFrame.clearCache()
 })
 function loadVoiceDetail(programId) {

@@ -88,6 +88,7 @@ onActivated(() => {
     }
 })
 onUnmounted(() => {
+    blocks.value.length = 0
     blocks = null
     initLoad = true
 })

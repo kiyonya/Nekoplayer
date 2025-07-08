@@ -4,7 +4,7 @@
     <span class="serial">{{ (index + 1).toString().padStart(2, '0') }}</span>
     <div class="cover-shell">
       <img src="@/assets/images/play-solid.svg" alt="" class="play-btn" @click="play" />
-      <img :data-src="resize(trackDetial.cover, 100, true)" class="lazyload cover" ref="cover" />
+      <img :data-src="resize(trackDetial.cover, 100, true)" class="lazyload cover" ref="cover" v-lazy />
     </div>
 
     <div class="info">
@@ -34,7 +34,6 @@ import { mmss } from '@/utils/timers'
 import { formatBytes, ob } from '@/utils/libs'
 import { getDate } from '@/utils/timers'
 import ArtistNameGroup from './ArtistNameGroup.vue'
-import { observer } from '@/lib/lazyload'
 import { resize } from '@/utils/imageProcess'
 import { Icon } from '@iconify/vue'
 import ContextMenu from '@/components/ContextMenu/ContextMenu.vue'
@@ -143,10 +142,9 @@ export default {
       }
     }
   },
-
-  mounted() {
-    observer(this.$refs.song)
-  }
+  beforeUnmount(){
+    this.$refs.song = null
+  },
 }
 </script>
 <style scoped>

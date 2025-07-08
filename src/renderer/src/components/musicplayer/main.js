@@ -253,7 +253,7 @@ export class DynamicBackground {
     window.addEventListener('resize', this.resizeHandler);
   }
   start() {
-    this.candraw = true;
+    // this.candraw = true;
     this.animate();
   }
   pause() {

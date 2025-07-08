@@ -43,8 +43,7 @@
         <div class="official-playlists">
           <PlaylistCard v-for="officialPlaylist in officialPlaylist?.slice(0, deviceScreenSize < 1 ? 5 : 6)"
             :name="officialPlaylist?.name" :cover="officialPlaylist?.coverImgUrl" :id="officialPlaylist?.id"
-            :key="officialPlaylist?.coverImgUrl"
-            class="card"
+            :key="officialPlaylist?.coverImgUrl" class="card"
             @playall="player.playPlaylist(null, null, { type: 'playlist', id: officialPlaylist?.id }, true)">
           </PlaylistCard>
           <Skeleton v-for="i in deviceScreenSize < 1 ? 5 : 6" v-if="officialPlaylist.length <= 0"></Skeleton>
@@ -57,7 +56,7 @@
         <div class="red-simisongs">
           <Song_Small v-for="song in redSimiSongs?.slice(0, deviceScreenSize < 1 ? 9 : 12)" :name="song?.name"
             :cover="song?.album?.picUrl" :artist="song?.artists" :id="song?.id" @play="
-              playRedSimiSong" @menu="(_,act)=>{miniTrackMenuSelected(_,act,playRedSimiSong)}">
+              playRedSimiSong" @menu="(_, act) => { miniTrackMenuSelected(_, act, playRedSimiSong) }">
           </Song_Small>
         </div>
       </div>
@@ -71,15 +70,6 @@
       </div>
     </div>
     <div class="body row style-rcmd">
-
-      <div class="user-style" v-if="deviceScreenSize >= 1">
-        <h1 class="ti">我的曲风</h1>
-        <div class="style" v-for="(style, index) in userStyle.slice(0, 3)"
-          :style="{ background: `rgb(${style?.mainColor})` }">
-          <span style="z-index: 1;">{{ style.tagName }}</span>
-          <img :src="style?.picUrl" alt="" class="icon">
-        </div>
-      </div>
       <div class="style-rcmd-detial">
         <h2 class="ti" style="justify-content: space-between;">{{ homepageStyleRCMD?.ui?.subTitle?.title }}
 
@@ -91,8 +81,8 @@
         <div class="songs">
           <Song_Small v-for="song in homepageStyleRCMD?.songs?.slice(0, deviceScreenSize < 1 ? 9 : 12)"
             :name="song?.name" :cover="song?.album?.picUrl" :artist="song?.artists" :id="song?.id" :key="song?.id"
-            @play="(id) => playHomepageStyleRecommendSongs(id)" @menu="(_,act)=>{
-              miniTrackMenuSelected(_,act,playHomepageStyleRecommendSongs)
+            @play="(id) => playHomepageStyleRecommendSongs(id)" @menu="(_, act) => {
+              miniTrackMenuSelected(_, act, playHomepageStyleRecommendSongs)
             }">
 
           </Song_Small>
@@ -102,15 +92,9 @@
     <div class="body  artist-new">
       <h2 class="ti">关注艺人新专辑</h2>
       <div class="artist-new-album g-shell-6">
-        <AlbumCard 
-        v-for="al in subscribeArtistsNewAlbum?.slice(0, deviceScreenSize < 1 ? 5 : 6)"
-        :name="al?.blockTitle?.resourceName"
-        :cover="al?.blockTitle?.imgUrl"
-        :size="al?.albumSongCount"
-        :id="al?.albumId"
-        :key="al?.albumId"
-        :date="al?.publishTime"
-        ></AlbumCard>
+        <AlbumCard v-for="al in subscribeArtistsNewAlbum?.slice(0, deviceScreenSize < 1 ? 5 : 6)"
+          :name="al?.blockTitle?.resourceName" :cover="al?.blockTitle?.imgUrl" :size="al?.albumSongCount"
+          :id="al?.albumId" :key="al?.albumId" :date="al?.publishTime"></AlbumCard>
       </div>
     </div>
 
@@ -118,7 +102,7 @@
 </template>
 <script setup>
 import { getDailySong, getRadio, getHomepageBlock, getUserStylePreference, getUserSubArtistsNewAlbum } from '@/api/recommend'
-import { nextTick, onActivated } from 'vue'
+import { nextTick, onActivated, onBeforeUnmount, onUnmounted } from 'vue'
 import { ref } from 'vue'
 import { Icon } from '@iconify/vue'
 import {
@@ -157,16 +141,15 @@ const personalFM = computed(() => {
 const isLogin = computed(() => {
   return store.state.isLogin
 })
-const dailySongs = ref([])
-const officialPlaylist = ref([])
-const simiRecommendBaseSong = ref({})
-const simiRecommend = ref([])
-const personalFMBackground = ref('')
-const recommendPlaylist = ref([])
-const homepageStyleRCMD = ref({})
-const userStyle = ref([])
-const redSimiSongs = ref([])
-const subscribeArtistsNewAlbum = ref([])
+let dailySongs = ref([])
+let officialPlaylist = ref([])
+let simiRecommendBaseSong = ref({})
+let simiRecommend = ref([])
+let personalFMBackground = ref('')
+let recommendPlaylist = ref([])
+let homepageStyleRCMD = ref({})
+let redSimiSongs = ref([])
+let subscribeArtistsNewAlbum = ref([])
 
 async function getWebApiRecommendPlaylist() {
   const data = await getRecommendPlaylist()
@@ -219,35 +202,6 @@ async function load() {
     getWebApiRecommendPlaylist,
     getHomepageStyleRecommend,
     async () => {
-      getUserStylePreference().then(data => {
-        const vos = data?.data.tagPreferenceVos
-        const stylePromises = vos.map(style => {
-          return new Promise((resolve) => {
-            const img = new Image();
-            img.src = style?.picUrl;
-            img.crossOrigin = 'anonymous';
-            img.onload = async () => {
-              try {
-                const mainColor = await getMainColorFromImage(img);
-                resolve({ ...style, mainColor });
-              } catch (error) {
-                console.error('Error getting color for image:', style.picUrl, error);
-                resolve({ ...style, mainColor: [0, 0, 0] });
-              }
-            };
-            img.onerror = () => {
-              console.error('Error loading image:', style.picUrl);
-              resolve(style);
-            };
-          });
-        });
-
-        Promise.all(stylePromises).then(stylesWithColors => {
-          userStyle.value = stylesWithColors;
-        });
-      })
-    },
-    async ()=>{
       if (!isLogin.value) { return }
       getUserSubArtistsNewAlbum(6).then((data) => {
         console.log(data?.data?.newWorks)
@@ -256,28 +210,39 @@ async function load() {
     }
   ]
 
-  Promise.resolve().then(paralleTask(tasks, 1)).then(()=>{
-    tasks = null;
+  paralleTask(tasks, 3).then(() => {
+    tasks.length = 0;
     webFrame.clearCache()
   })
 
 }
 
-onMounted(()=>{
+onMounted(() => {
   nextTick().then(load())
 })
 onActivated(() => {
   let watcher = watch(isLogin, (newVal, oldVal) => {
-      load()
+    load()
   })
   const d = new Date()
   date.value.month = d.getMonth() + 1
   date.value.date = d.getDate().toString().padStart(2, '0')
-  onDeactivated(()=>{
+  onDeactivated(() => {
     watcher()
   })
 })
-
+onBeforeUnmount(() => {
+  dailySongs = null
+  officialPlaylist = null
+  simiRecommendBaseSong = null
+  simiRecommend = null
+  personalFMBackground = null
+  recommendPlaylist = null
+  homepageStyleRCMD = null
+  redSimiSongs = null
+  subscribeArtistsNewAlbum = null
+  webFrame.clearCache()
+})
 function randomGet(array) {
   return array[Math.floor(Math.random() * array.length)]
 }
@@ -301,12 +266,12 @@ function playRedSimiSong(id) {
   let source = { type: 'simi_recommend', id: 'redsimi' }
   player.playNewList(id, redSimiSongs.value.map(i => { return { id: i.id, source } }), source)
 }
-function miniTrackMenuSelected({name,id} = _,item,playHandler) {
+function miniTrackMenuSelected({ name, id } = _, item, playHandler) {
   const act = item?.act
   let source = { type: 'recommend_mini_song', id: id }
   const actions = {
     play: () => {
-      if(playHandler){
+      if (playHandler) {
         playHandler(id)
       }
     },
@@ -323,10 +288,10 @@ function miniTrackMenuSelected({name,id} = _,item,playHandler) {
       showMessageNotification("已复制")
     },
     downloadlyric: () => {
-      toolkit.downloadLyric(id,name)
+      toolkit.downloadLyric(id, name)
     },
     downloadNloLyric: () => {
-      toolkit.downloadNloLyric(id,name)
+      toolkit.downloadNloLyric(id, name)
     }
   }
   if (actions[act]) {
@@ -897,7 +862,8 @@ function miniTrackMenuSelected({name,id} = _,item,playHandler) {
   gap: 1.5rem 1rem;
 
 }
-.artist-new{
+
+.artist-new {
   display: flex;
   flex-direction: column;
   gap: 1rem;

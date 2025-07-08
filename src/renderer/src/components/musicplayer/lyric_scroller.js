@@ -93,11 +93,11 @@ export class LyricScroller {
       this.scroll(this.index)
     }, 100)()
   }
-  _scroll(index) {
+  _scroll(index,useLastIndexValidation = true) {
     if (this.isWheeling) return
     const children = this.container.children
     if (index < 0 && index >= children.length) return
-    if (this.lastIndex === index) return
+    if (useLastIndexValidation && this.lastIndex === index) return
     this.index = index
 
     const highlight = children[index]

@@ -26,8 +26,8 @@
     <router-view v-slot="{ Component }" class="app-view" id="__appview__">
       
       <keep-alive
-        :include="['Recommend', 'LocalMusic', 'Artist', 'Library', 'Search', 'Comment', 'LocalMusicGroup', 'Setting', 'Radio', 'PlaylistSquare', 'PlaylistCategory', 'SearchDetail','DailyRecommend']"
-        :max="20">
+        :include="['Recommend', 'LocalMusic', 'Artist', 'Library', 'Search', 'Comment', 'LocalMusicGroup', 'Radio', 'PlaylistSquare', 'PlaylistCategory', 'SearchDetail','DailyRecommend']"
+        :max="10">
         
           <component :is="Component" :key="$route.fullPath" />
         
@@ -55,7 +55,7 @@
     <Equalizer v-if="store.state.showEqualizer"></Equalizer>
 
     <Transition name="player">
-      <MusicPlayer v-if="store.state.showPlayer"></MusicPlayer>
+      <MusicPlayer v-show="store.state.showPlayer"></MusicPlayer>
     </Transition>
     <button class="totop" :class="showToTop ? 'show-totop' : ''" @click="totop">
       <Icon icon="tdesign:backtop" style="width: 2em;height: 2em;" />

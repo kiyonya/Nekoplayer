@@ -72,7 +72,7 @@
 <script setup>
 import { getArtistDetial, getMvs, getArtistAlbums, getDesc } from '@/api/artist'
 import { resize } from '@/utils/imageProcess'
-import { onDeactivated, ref } from 'vue'
+import { onBeforeUnmount, onDeactivated, ref } from 'vue'
 import { onBeforeMount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getArtistBriefAndSongs } from '@/api/artist'
@@ -84,13 +84,13 @@ import ModalWindow from '@/components/windows/ModalWindow.vue'
 import { computed } from 'vue'
 import { store } from '@/store'
 import { player } from '@/main'
-const artistId = ref(0)
-const artistDetial = ref({})
-const lastestAlbum = ref({})
-const albums = ref([])
-const mvs = ref([])
-const hotSongs = ref([])
-const dss = computed(() => {
+let artistId = ref(0)
+let artistDetial = ref({})
+let lastestAlbum = ref({})
+let albums = ref([])
+let mvs = ref([])
+let hotSongs = ref([])
+let dss = computed(() => {
   return store.state.deviceScreenSize
 })
 const showDesc = ref(false)
@@ -124,6 +124,16 @@ onBeforeMount(() => {
     artistId.value = id
     Promise.resolve().then(load(id))
   }
+})
+onBeforeUnmount(()=>{
+artistId = null
+artistDetial = null
+lastestAlbum = null
+albums = null
+mvs = null
+hotSongs.value.length = 0
+hotSongs = null
+webFrame?.clearCache()
 })
 function playHotSongs(id) {
   player.playArtist(id, null, { type: 'artist', id: artistId.value })
